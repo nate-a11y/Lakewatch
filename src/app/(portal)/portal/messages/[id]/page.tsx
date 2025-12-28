@@ -7,6 +7,7 @@ import {
   Send,
   Paperclip,
   Image as ImageIcon,
+  MoreVertical,
   Phone,
   Building2,
   Check,
