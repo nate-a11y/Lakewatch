@@ -63,6 +63,12 @@ export function Header() {
               <Phone className="h-4 w-4" />
               {siteConfig.phone}
             </a>
+            <Link
+              href="/login"
+              className="text-sm font-medium text-[#a1a1aa] hover:text-white transition-colors"
+            >
+              Log In
+            </Link>
             <Button href="/contact" size="sm">
               Get a Free Quote
             </Button>
@@ -112,6 +118,13 @@ export function Header() {
                 <Phone className="h-5 w-5" />
                 {siteConfig.phone}
               </a>
+              <Link
+                href="/login"
+                className="text-base font-medium text-[#a1a1aa] hover:text-white transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Log In
+              </Link>
               <Button href="/contact" className="w-full">
                 Get a Free Quote
               </Button>

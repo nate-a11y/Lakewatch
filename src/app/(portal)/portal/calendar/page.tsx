@@ -1,137 +1,98 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import CalendarView from './CalendarView'
 
-import { useState } from 'react'
-import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+export interface CalendarEvent {
+  id: string
+  date: string
+  type: 'inspection' | 'occupancy'
+  property: string
+  propertyId: number
+  label?: string
+}
 
-export default function CalendarPage() {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+export default async function CalendarPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // Mock data
-  const events = [
-    { id: '1', date: '2026-01-03', type: 'inspection', property: 'Lake House' },
-    { id: '2', date: '2026-01-15', type: 'inspection', property: 'Guest Cabin' },
-    { id: '3', date: '2026-01-10', type: 'occupancy', property: 'Lake House', label: 'Owner Visit' },
-  ]
+  // Get user's internal ID
+  const { data: userData } = await supabase
+    .from('lwp_users')
+    .select('id')
+    .eq('supabase_id', user?.id)
+    .single()
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ]
+  const userId = userData?.id
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDay = firstDay.getDay()
+  // Get user's properties
+  const { data: properties } = await supabase
+    .from('lwp_properties')
+    .select('id, name')
+    .eq('owner_id', userId || 0)
 
-    return { daysInMonth, startingDay }
-  }
+  const propertyIds = properties?.map(p => p.id) || []
+  const propertyMap = new Map(properties?.map(p => [p.id, p.name]) || [])
 
-  const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
+  // Fetch inspections for user's properties (next 6 months)
+  const today = new Date()
+  const sixMonthsLater = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())
 
-  const prevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
-  }
+  const { data: inspections } = await supabase
+    .from('lwp_inspections')
+    .select('id, scheduled_date, property_id')
+    .in('property_id', propertyIds.length > 0 ? propertyIds : [0])
+    .gte('scheduled_date', today.toISOString().split('T')[0])
+    .lte('scheduled_date', sixMonthsLater.toISOString().split('T')[0])
+    .eq('status', 'scheduled')
 
-  const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
-  }
+  // Fetch occupancy events for user's properties
+  const { data: occupancyEvents } = await supabase
+    .from('lwp_occupancy_calendar')
+    .select('id, start_date, end_date, property_id, event_type, guest_name')
+    .in('property_id', propertyIds.length > 0 ? propertyIds : [0])
+    .gte('end_date', today.toISOString().split('T')[0])
+    .lte('start_date', sixMonthsLater.toISOString().split('T')[0])
 
-  return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Calendar</h1>
-          <p className="text-[#a1a1aa]">
-            View inspections and manage occupancy
-          </p>
-        </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
-          <Plus className="w-5 h-5" />
-          Add Occupancy
-        </button>
-      </div>
+  // Transform into calendar events
+  const events: CalendarEvent[] = []
 
-      {/* Calendar */}
-      <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={prevMonth}
-            className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-xl font-semibold">
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-          </h2>
-          <button
-            onClick={nextMonth}
-            className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+  // Add inspections
+  inspections?.forEach(insp => {
+    events.push({
+      id: `insp-${insp.id}`,
+      date: insp.scheduled_date,
+      type: 'inspection',
+      property: propertyMap.get(insp.property_id) || 'Property',
+      propertyId: insp.property_id,
+    })
+  })
 
-        {/* Day headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div key={day} className="text-center text-sm text-[#71717a] py-2">
-              {day}
-            </div>
-          ))}
-        </div>
+  // Add occupancy events (expand date ranges into individual days)
+  occupancyEvents?.forEach(occ => {
+    const start = new Date(occ.start_date)
+    const end = new Date(occ.end_date)
+    const label = occ.event_type === 'owner_visit'
+      ? 'Owner Visit'
+      : occ.event_type === 'guest_visit'
+      ? `Guest: ${occ.guest_name || 'Guest'}`
+      : occ.event_type === 'rental'
+      ? 'Rental'
+      : 'Occupied'
 
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {/* Empty cells for days before the first */}
-          {Array.from({ length: startingDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="aspect-square" />
-          ))}
+    // Add event for each day in the range
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      events.push({
+        id: `occ-${occ.id}-${d.toISOString().split('T')[0]}`,
+        date: d.toISOString().split('T')[0],
+        type: 'occupancy',
+        property: propertyMap.get(occ.property_id) || 'Property',
+        propertyId: occ.property_id,
+        label,
+      })
+    }
+  })
 
-          {/* Days */}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1
-            const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            const dayEvents = events.filter(e => e.date === dateStr)
+  // Get property options for the add occupancy form
+  const propertyOptions = properties?.map(p => ({ id: p.id, name: p.name })) || []
 
-            return (
-              <div
-                key={day}
-                className="aspect-square p-1 border border-[#27272a] rounded-lg hover:border-[#4cbb17]/50 transition-colors cursor-pointer"
-              >
-                <div className="text-sm text-[#a1a1aa]">{day}</div>
-                {dayEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className={`text-xs px-1 py-0.5 rounded mt-0.5 truncate ${
-                      event.type === 'inspection'
-                        ? 'bg-[#4cbb17]/20 text-[#4cbb17]'
-                        : 'bg-blue-500/20 text-blue-400'
-                    }`}
-                  >
-                    {event.type === 'inspection' ? '🔍' : '🏠'} {event.property}
-                  </div>
-                ))}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex gap-6 mt-6 pt-4 border-t border-[#27272a]">
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-3 h-3 rounded bg-[#4cbb17]" />
-            <span className="text-[#a1a1aa]">Scheduled Inspection</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-3 h-3 rounded bg-blue-500" />
-            <span className="text-[#a1a1aa]">Occupancy</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  return <CalendarView initialEvents={events} properties={propertyOptions} />
 }
