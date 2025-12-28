@@ -316,7 +316,8 @@ export async function getTechnicianHistory(limit = 20) {
 }
 
 // Check in to inspection
-export async function checkInToInspection(inspectionId: number, gpsData?: { lat: number, lng: number }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function checkInToInspection(inspectionId: number, _gpsData?: { lat: number, lng: number }) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

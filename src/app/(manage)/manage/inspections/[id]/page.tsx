@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   ClipboardCheck,
   Building2,
-  User,
   Calendar,
   Clock,
   CheckCircle,
@@ -11,7 +10,6 @@ import {
   AlertTriangle,
   Camera,
   MessageSquare,
-  Edit,
   Download,
 } from 'lucide-react'
 

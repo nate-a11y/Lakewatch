@@ -36,7 +36,8 @@ type InspectionStep = 'info' | 'checkin' | 'checklist' | 'summary' | 'complete'
 
 export default function InspectionPage() {
   const params = useParams()
-  const _id = params.id as string
+  // Inspection ID will be used for API calls in production
+  void params.id
 
   const [step, setStep] = useState<InspectionStep>('info')
   const [isCheckingIn, setIsCheckingIn] = useState(false)

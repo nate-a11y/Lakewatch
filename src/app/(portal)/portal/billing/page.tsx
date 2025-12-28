@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { CreditCard, Download, FileText, CheckCircle2 } from 'lucide-react'
+import { CreditCard, Download, FileText } from 'lucide-react'
 
 interface Invoice {
   id: string

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ClipboardList, Plus, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ClipboardList, Plus, Clock } from 'lucide-react'
 
 interface ServiceRequest {
   id: string

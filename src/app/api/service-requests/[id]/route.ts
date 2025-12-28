@@ -163,9 +163,6 @@ export async function PATCH(
       const requester = Array.isArray(existingRequest.requested_by)
         ? existingRequest.requested_by[0]
         : existingRequest.requested_by
-      const property = Array.isArray(existingRequest.property)
-        ? existingRequest.property[0]
-        : existingRequest.property
 
       // Create in-app notification
       await supabase.from('lwp_notifications').insert({

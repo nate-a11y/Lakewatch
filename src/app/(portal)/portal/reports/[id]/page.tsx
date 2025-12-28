@@ -97,20 +97,20 @@ export default async function ReportDetailPage({
     weather: inspection.weather || { temperature: null, conditions: null },
     summary: inspection.summary || 'No summary provided.',
     checklist: (() => {
-      const responses = inspection.checklist_responses || []
-      const categories = [...new Set(responses.map((r: { category?: string }) => r.category || 'General'))]
+      const responses = (inspection.checklist_responses || []) as Array<{ category?: string; item?: string; response?: string; notes?: string }>
+      const categories = [...new Set(responses.map((r) => r.category || 'General'))] as string[]
       return categories.map(category => ({
         category,
-        items: responses.filter((r: { category?: string }) => (r.category || 'General') === category),
+        items: responses.filter((r) => (r.category || 'General') === category),
       }))
-    })(),
+    })() as Array<{ category: string; items: Array<{ item?: string; response?: string; notes?: string }> }>,
     issues: inspection.issues_found || [],
     photos: inspection.photos || [],
   }
 
-  const totalItems = report.checklist.reduce((acc: number, cat: { items: unknown[] }) => acc + cat.items.length, 0)
+  const totalItems = report.checklist.reduce((acc, cat) => acc + cat.items.length, 0)
   const passedItems = report.checklist.reduce(
-    (acc: number, cat: { items: Array<{ response?: string }> }) => acc + cat.items.filter(i => i.response === 'pass').length,
+    (acc, cat) => acc + cat.items.filter(i => i.response === 'pass').length,
     0
   )
 
@@ -254,7 +254,7 @@ export default async function ReportDetailPage({
         <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Inspection Checklist</h2>
           <div className="space-y-6">
-            {report.checklist.map((category: { category: string; items: Array<{ item?: string; response?: string; notes?: string }> }) => (
+            {report.checklist.map((category) => (
               <div key={category.category}>
                 <h3 className="text-[#4cbb17] font-medium mb-3">{category.category}</h3>
                 <div className="space-y-2">
@@ -308,6 +308,7 @@ export default async function ReportDetailPage({
             {report.photos.map((photo: { id?: string; caption?: string; url?: string }, idx: number) => (
               <div key={photo.id || idx} className="aspect-video bg-[#27272a] rounded-lg overflow-hidden relative group cursor-pointer">
                 {photo.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={photo.url} alt={photo.caption || 'Inspection photo'} className="w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-[#71717a]">

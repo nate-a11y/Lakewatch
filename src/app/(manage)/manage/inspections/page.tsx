@@ -5,9 +5,7 @@ import Link from 'next/link'
 import {
   Search,
   Plus,
-  Filter,
   ClipboardCheck,
-  Calendar,
   User,
   Building2,
   ChevronRight,
