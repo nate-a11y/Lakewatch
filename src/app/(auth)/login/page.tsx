@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/portal'
@@ -176,5 +176,33 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+function LoginFormFallback() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-10 bg-[#27272a] rounded mb-2 w-48" />
+      <div className="h-6 bg-[#27272a] rounded mb-8 w-64" />
+      <div className="space-y-4">
+        <div>
+          <div className="h-4 bg-[#27272a] rounded mb-2 w-12" />
+          <div className="h-12 bg-[#27272a] rounded" />
+        </div>
+        <div>
+          <div className="h-4 bg-[#27272a] rounded mb-2 w-16" />
+          <div className="h-12 bg-[#27272a] rounded" />
+        </div>
+        <div className="h-12 bg-[#27272a] rounded" />
+      </div>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFormFallback />}>
+      <LoginForm />
+    </Suspense>
   )
 }

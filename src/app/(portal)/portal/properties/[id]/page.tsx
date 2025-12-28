@@ -12,14 +12,15 @@ import {
   Plus,
 } from 'lucide-react'
 
-export default function PropertyDetailPage({
+export default async function PropertyDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   // Mock data - replace with actual API call
   const property = {
-    id: params.id,
+    id: id,
     name: 'Lake House',
     address: {
       street: '123 Lakefront Dr',

@@ -16,14 +16,15 @@ import {
   AlertCircle,
 } from 'lucide-react'
 
-export default function ReportDetailPage({
+export default async function ReportDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   // Mock data - replace with actual API call
   const report = {
-    id: params.id,
+    id: id,
     property: {
       id: '1',
       name: 'Lake House',
