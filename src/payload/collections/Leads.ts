@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Leads: CollectionConfig = {
   slug: 'leads',
+  dbName: 'lwp_leads',
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'email', 'serviceInterest', 'createdAt'],

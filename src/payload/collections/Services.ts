@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Services: CollectionConfig = {
   slug: 'services',
+  dbName: 'lwp_services',
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'featured', 'updatedAt'],
