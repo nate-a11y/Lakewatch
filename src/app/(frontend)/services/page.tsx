@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
-import { Section, SectionHeader, SectionTitle, SectionSubtitle } from '@/components/ui/section'
+import { Section } from '@/components/ui/section'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

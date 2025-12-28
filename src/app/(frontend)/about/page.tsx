@@ -1,5 +1,4 @@
 import { Metadata } from 'next'
-import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Section, SectionHeader, SectionTitle, SectionSubtitle } from '@/components/ui/section'
 import { Card, CardContent } from '@/components/ui/card'

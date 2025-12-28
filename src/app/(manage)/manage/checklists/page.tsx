@@ -9,8 +9,6 @@ import {
   ChevronRight,
   Copy,
   Edit,
-  MoreVertical,
-  Trash2,
 } from 'lucide-react'
 
 interface Checklist {

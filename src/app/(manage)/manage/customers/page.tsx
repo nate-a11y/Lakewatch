@@ -5,8 +5,6 @@ import Link from 'next/link'
 import {
   Search,
   Plus,
-  Filter,
-  MoreVertical,
   Building2,
   Mail,
   Phone,

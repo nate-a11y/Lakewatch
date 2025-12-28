@@ -1,16 +1,12 @@
 import Link from 'next/link'
 import {
   ArrowLeft,
-  User,
   Mail,
   Phone,
   Building2,
-  Calendar,
-  CreditCard,
   FileText,
   MessageSquare,
   Edit,
-  MoreVertical,
 } from 'lucide-react'
 
 export default async function CustomerDetailPage({

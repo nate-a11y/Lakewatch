@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Building2,
   MapPin,
-  User,
   Calendar,
   ClipboardCheck,
   AlertTriangle,
@@ -11,7 +10,6 @@ import {
   Edit,
   Thermometer,
   Droplets,
-  Wind,
   Camera,
 } from 'lucide-react'
 
