@@ -1,23 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
   MapPin,
   Phone,
   Key,
-  Wifi,
-  Shield,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Camera,
-  ChevronRight,
   ChevronDown,
   Navigation,
-  Clock,
   Send,
   Loader2,
 } from 'lucide-react'
@@ -40,14 +36,12 @@ type InspectionStep = 'info' | 'checkin' | 'checklist' | 'summary' | 'complete'
 
 export default function InspectionPage() {
   const params = useParams()
-  const router = useRouter()
-  const id = params.id as string
+  const _id = params.id as string
 
   const [step, setStep] = useState<InspectionStep>('info')
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [checkedIn, setCheckedIn] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['Exterior'])
-  const [currentItemId, setCurrentItemId] = useState<string | null>(null)
   const [summaryNotes, setSummaryNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -137,7 +131,6 @@ export default function InspectionPage() {
 
   const completedCount = checklistItems.filter(item => item.status !== null).length
   const totalCount = checklistItems.length
-  const issuesCount = checklistItems.filter(item => item.status === 'fail' || item.status === 'attention').length
   const progress = (completedCount / totalCount) * 100
 
   // Property Info Step

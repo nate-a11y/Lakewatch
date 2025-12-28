@@ -1,14 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import {
   Wrench,
   Building2,
   Clock,
-  ChevronRight,
   CheckCircle,
-  AlertTriangle,
   Calendar,
   Phone,
   MapPin,

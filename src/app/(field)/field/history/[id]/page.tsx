@@ -1,9 +1,6 @@
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Building2,
-  Calendar,
-  Clock,
   CheckCircle,
   XCircle,
   AlertTriangle,
