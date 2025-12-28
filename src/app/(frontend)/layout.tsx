@@ -1,5 +1,6 @@
 import { Header, Footer } from '@/components/layout'
 import { LocalBusinessSchema, OrganizationSchema } from '@/components/seo/schema'
+import { ToastProvider } from '@/components/providers'
 import '../globals.css'
 
 export default function FrontendLayout({
@@ -14,6 +15,7 @@ export default function FrontendLayout({
         <OrganizationSchema />
       </head>
       <body className="min-h-screen bg-[#060606] text-white antialiased font-sans">
+        <ToastProvider />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

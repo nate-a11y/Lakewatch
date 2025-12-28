@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PortalNav } from '@/components/portal/PortalNav'
 import { PortalHeader } from '@/components/portal/PortalHeader'
+import { ToastProvider } from '@/components/providers'
 import '../globals.css'
 
 export default async function PortalLayout({
@@ -26,6 +27,7 @@ export default async function PortalLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#060606] text-white antialiased font-sans">
+        <ToastProvider />
         <div className="min-h-screen flex">
           {/* Sidebar */}
           <PortalNav />

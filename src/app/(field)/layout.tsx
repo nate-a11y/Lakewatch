@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import FieldNav from '@/components/field/FieldNav'
 import FieldHeader from '@/components/field/FieldHeader'
+import { ToastProvider } from '@/components/providers'
+import '../globals.css'
 
 export default async function FieldLayout({
   children,
@@ -27,12 +29,17 @@ export default async function FieldLayout({
   // }
 
   return (
-    <div className="min-h-screen bg-black">
-      <FieldHeader user={user} />
-      <main className="pb-20 pt-4 px-4">
-        {children}
-      </main>
-      <FieldNav />
-    </div>
+    <html lang="en">
+      <body className="min-h-screen bg-black text-white antialiased font-sans">
+        <ToastProvider />
+        <div className="min-h-screen">
+          <FieldHeader user={user} />
+          <main className="pb-20 pt-4 px-4">
+            {children}
+          </main>
+          <FieldNav />
+        </div>
+      </body>
+    </html>
   )
 }
