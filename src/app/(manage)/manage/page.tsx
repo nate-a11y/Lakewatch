@@ -20,14 +20,14 @@ export default async function AdminDashboardPage() {
     redirect('/login?redirect=/manage')
   }
 
-  // Verify admin/staff role
+  // Verify admin/owner role using email (most reliable)
   const { data: userData } = await supabase
     .from('lwp_users')
     .select('id, role, first_name')
-    .eq('supabase_id', user.id)
+    .eq('email', user.email)
     .single()
 
-  if (!userData || !['admin', 'staff'].includes(userData.role)) {
+  if (!userData || !['admin', 'owner'].includes(userData.role)) {
     redirect('/portal')
   }
 
