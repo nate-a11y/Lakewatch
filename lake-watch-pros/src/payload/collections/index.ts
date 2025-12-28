@@ -1,0 +1,8 @@
+export { Services } from './Services'
+export { Testimonials } from './Testimonials'
+export { Team } from './Team'
+export { FAQs } from './FAQs'
+export { Pages } from './Pages'
+export { Leads } from './Leads'
+export { Media } from './Media'
+export { Users } from './Users'
