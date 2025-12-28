@@ -45,6 +45,8 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
+    schemaName: 'public',
+    tablePrefix: 'lwp_',
   }),
   plugins: [
     ...(process.env.BLOB_READ_WRITE_TOKEN
