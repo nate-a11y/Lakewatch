@@ -17,17 +17,28 @@ export default async function FieldLayout({
     redirect('/login?redirect=/field')
   }
 
-  // Fetch user role from database
-  const { data: dbUser } = await supabase
+  // Fetch user role from database - try supabase_id first, then email as fallback
+  let { data: dbUser } = await supabase
     .from('lwp_users')
     .select('role, first_name, last_name')
     .eq('supabase_id', user.id)
     .single()
 
+  // Fallback to email lookup if supabase_id not found
+  if (!dbUser && user.email) {
+    const { data: emailUser } = await supabase
+      .from('lwp_users')
+      .select('role, first_name, last_name')
+      .eq('email', user.email)
+      .single()
+    dbUser = emailUser
+  }
+
   const role = dbUser?.role || user.user_metadata?.role || 'customer'
 
-  // Only allow technicians, admins, and owners access to field portal
-  if (!['technician', 'admin', 'owner'].includes(role)) {
+  // Only redirect away if we have a confirmed role from the database
+  // This prevents redirect loops when the database query fails
+  if (dbUser?.role && !['technician', 'admin', 'owner'].includes(role)) {
     redirect('/portal')
   }
 
