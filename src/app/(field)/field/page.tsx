@@ -7,7 +7,6 @@ import {
   Navigation,
   Clock,
   CheckCircle,
-  Building2,
   ChevronRight,
   Play,
   Map,

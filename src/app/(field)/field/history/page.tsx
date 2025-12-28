@@ -5,12 +5,10 @@ import Link from 'next/link'
 import {
   Search,
   ClipboardCheck,
-  Building2,
   Calendar,
   ChevronRight,
   CheckCircle,
   AlertTriangle,
-  Filter,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -32,7 +30,6 @@ interface PastInspection {
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState<'all' | 'week' | 'month'>('all')
 
   // Mock data
   const inspections: PastInspection[] = [
