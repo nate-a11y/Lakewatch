@@ -8,6 +8,7 @@ import {
   Shield,
   Building2,
 } from 'lucide-react'
+import ActionButton from '@/components/buttons/ActionButton'
 
 export default async function TeamMemberDetailPage({
   params,
@@ -101,14 +102,16 @@ export default async function TeamMemberDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Edit className="w-4 h-4" />
-            Edit
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Shield className="w-4 h-4" />
-            Permissions
-          </button>
+          <ActionButton
+            label="Edit"
+            message="Edit team member coming soon"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors"
+          />
+          <ActionButton
+            label="Permissions"
+            message="Manage permissions coming soon"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors"
+          />
         </div>
       </div>
 
@@ -168,7 +171,7 @@ export default async function TeamMemberDetailPage({
                 <h2 className="text-lg font-semibold">
                   Assigned Properties ({member.assignedProperties.length})
                 </h2>
-                <button className="text-sm text-[#4cbb17] hover:underline">Manage</button>
+                <ActionButton label="Manage" message="Manage property assignments coming soon" />
               </div>
               <div className="space-y-2">
                 {member.assignedProperties.map((property) => (
@@ -241,7 +244,7 @@ export default async function TeamMemberDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
+              <ActionButton label="Edit" message="Edit notes coming soon" />
             </div>
             <p className="text-sm text-[#a1a1aa]">{member.notes}</p>
           </section>
@@ -250,18 +253,26 @@ export default async function TeamMemberDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                View all inspections
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                Assign properties
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                Reset password
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
-                Deactivate account
-              </button>
+              <ActionButton
+                label="View all inspections"
+                message="View inspections coming soon"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors"
+              />
+              <ActionButton
+                label="Assign properties"
+                message="Property assignment coming soon"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors"
+              />
+              <ActionButton
+                label="Reset password"
+                message="Password reset email sent"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors"
+              />
+              <ActionButton
+                label="Deactivate account"
+                message="Account deactivation coming soon"
+                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+              />
             </div>
           </section>
         </div>

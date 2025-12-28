@@ -12,6 +12,7 @@ import {
   Droplets,
   Camera,
 } from 'lucide-react'
+import ActionButton from '@/components/buttons/ActionButton'
 
 export default async function PropertyDetailPage({
   params,
@@ -312,7 +313,7 @@ export default async function PropertyDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
+              <ActionButton label="Edit" message="Edit notes coming soon" />
             </div>
             <p className="text-sm text-[#a1a1aa]">{property.propertyNotes}</p>
           </section>

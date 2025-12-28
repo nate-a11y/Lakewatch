@@ -11,6 +11,7 @@ import {
   Edit,
   UserPlus,
 } from 'lucide-react'
+import ActionButton from '@/components/buttons/ActionButton'
 
 export default async function RequestDetailPage({
   params,
@@ -172,7 +173,7 @@ export default async function RequestDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Add note</button>
+              <ActionButton label="Add note" message="Add note coming soon" />
             </div>
             <p className="text-[#a1a1aa]">{request.notes}</p>
           </section>
@@ -205,7 +206,7 @@ export default async function RequestDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Assigned To</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Change</button>
+              <ActionButton label="Change" message="Change assignment coming soon" />
             </div>
             {request.assignedTo ? (
               <Link

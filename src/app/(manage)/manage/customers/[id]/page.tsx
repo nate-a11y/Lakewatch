@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Edit,
 } from 'lucide-react'
+import ActionButton from '@/components/buttons/ActionButton'
 
 export default async function CustomerDetailPage({
   params,
@@ -119,7 +120,7 @@ export default async function CustomerDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Properties ({customer.properties.length})</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Add property</button>
+              <ActionButton label="Add property" message="Add property coming soon" />
             </div>
             <div className="space-y-3">
               {customer.properties.map((property) => (
@@ -213,7 +214,7 @@ export default async function CustomerDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
+              <ActionButton label="Edit" message="Edit notes coming soon" />
             </div>
             <p className="text-sm text-[#a1a1aa]">{customer.notes}</p>
           </section>

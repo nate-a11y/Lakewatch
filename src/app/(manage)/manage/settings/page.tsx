@@ -11,6 +11,7 @@ import {
   Save,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 type SettingsTab = 'company' | 'notifications' | 'billing' | 'integrations' | 'security'
 
@@ -127,7 +128,7 @@ function CompanySettings() {
               </div>
               <div className="text-right">
                 <p className="font-semibold text-[#4cbb17]">${plan.price}/mo</p>
-                <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
+                <button onClick={() => toast.success('Edit plan settings coming soon')} className="text-sm text-[#4cbb17] hover:underline">Edit</button>
               </div>
             </div>
           ))}
@@ -277,7 +278,7 @@ function IntegrationSettings() {
                 <p className="text-sm text-green-500">Connected</p>
               </div>
             </div>
-            <button className="text-sm text-[#71717a] hover:text-white">Configure</button>
+            <button onClick={() => toast.success('Opening configuration...')} className="text-sm text-[#71717a] hover:text-white">Configure</button>
           </div>
           <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
             <div className="flex items-center gap-4">
@@ -289,7 +290,7 @@ function IntegrationSettings() {
                 <p className="text-sm text-green-500">Connected</p>
               </div>
             </div>
-            <button className="text-sm text-[#71717a] hover:text-white">Configure</button>
+            <button onClick={() => toast.success('Opening configuration...')} className="text-sm text-[#71717a] hover:text-white">Configure</button>
           </div>
           <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
             <div className="flex items-center gap-4">
@@ -301,7 +302,7 @@ function IntegrationSettings() {
                 <p className="text-sm text-[#71717a]">Not connected</p>
               </div>
             </div>
-            <button className="text-sm text-[#4cbb17] hover:underline">Connect</button>
+            <button onClick={() => toast.success('Integration setup coming soon')} className="text-sm text-[#4cbb17] hover:underline">Connect</button>
           </div>
           <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
             <div className="flex items-center gap-4">
@@ -313,7 +314,7 @@ function IntegrationSettings() {
                 <p className="text-sm text-[#71717a]">Not connected</p>
               </div>
             </div>
-            <button className="text-sm text-[#4cbb17] hover:underline">Connect</button>
+            <button onClick={() => toast.success('Integration setup coming soon')} className="text-sm text-[#4cbb17] hover:underline">Connect</button>
           </div>
         </div>
       </section>
