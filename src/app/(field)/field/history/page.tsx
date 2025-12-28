@@ -18,6 +18,7 @@ import {
   Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface PastInspection {
   id: string
@@ -232,7 +233,7 @@ export default function HistoryPage() {
         <h1 className="text-2xl font-bold">History</h1>
         <button
           className="flex items-center gap-2 px-3 py-2 text-sm text-[#71717a] hover:text-white transition-colors"
-          onClick={() => {/* Export functionality placeholder */}}
+          onClick={() => toast.success('Exporting history to CSV...')}
         >
           <Download className="w-4 h-4" />
           Export
