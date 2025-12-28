@@ -4,10 +4,19 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  Building2,
   Download,
   Filter,
 } from 'lucide-react'
+
+interface Report {
+  id: string
+  property: { id: string; name: string }
+  date: string
+  status: string
+  technician: string
+  summary: string
+  viewed: boolean
+}
 
 export default function ReportsPage() {
   // Mock data - replace with actual API calls
@@ -93,7 +102,7 @@ export default function ReportsPage() {
   )
 }
 
-function ReportCard({ report }: { report: any }) {
+function ReportCard({ report }: { report: Report }) {
   return (
     <Link
       href={`/portal/reports/${report.id}`}

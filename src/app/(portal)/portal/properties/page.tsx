@@ -1,6 +1,18 @@
 import Link from 'next/link'
 import { Building2, MapPin, Home, Calendar, ArrowRight, Plus } from 'lucide-react'
 
+interface Property {
+  id: string
+  name: string
+  address: string
+  type: string
+  squareFootage: number
+  status: string
+  servicePlan: string
+  nextInspection: string
+  lastInspection: string
+}
+
 export default function PropertiesPage() {
   // Mock data - replace with actual API calls
   const properties = [
@@ -74,7 +86,7 @@ export default function PropertiesPage() {
   )
 }
 
-function PropertyCard({ property }: { property: any }) {
+function PropertyCard({ property }: { property: Property }) {
   const typeIcons: Record<string, React.ReactNode> = {
     house: <Home className="w-5 h-5" />,
     cabin: <Home className="w-5 h-5" />,
