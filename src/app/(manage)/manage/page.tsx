@@ -1,57 +1,153 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   Users,
   Building2,
   ClipboardCheck,
   ClipboardList,
-  DollarSign,
   AlertTriangle,
   Calendar,
   TrendingUp,
   Clock,
-  CheckCircle2,
 } from 'lucide-react'
 
-export default function AdminDashboardPage() {
-  // Mock data - replace with actual API calls
-  const stats = {
-    activeCustomers: 47,
-    activeProperties: 82,
-    inspectionsToday: 12,
-    pendingRequests: 5,
-    overdueInvoices: 3,
-    revenueThisMonth: 24850,
-    revenueLastMonth: 22340,
+export default async function AdminDashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?redirect=/manage')
   }
 
-  const todaySchedule = [
-    { id: '1', time: '8:00 AM', property: 'Lake House - Smith', technician: 'Mike T.', status: 'completed' },
-    { id: '2', time: '9:30 AM', property: 'Sunset Cove - Doe', technician: 'Mike T.', status: 'in_progress' },
-    { id: '3', time: '11:00 AM', property: 'Woodland Cabin - Wilson', technician: 'Lisa M.', status: 'scheduled' },
-    { id: '4', time: '1:00 PM', property: 'Marina View - Johnson', technician: 'Lisa M.', status: 'scheduled' },
-    { id: '5', time: '2:30 PM', property: 'Hillside Retreat - Brown', technician: 'Mike T.', status: 'scheduled' },
-  ]
+  // Verify admin/staff role
+  const { data: userData } = await supabase
+    .from('lwp_users')
+    .select('id, role, first_name')
+    .eq('supabase_id', user.id)
+    .single()
 
-  const pendingRequests = [
-    { id: '1', type: 'Pre-Arrival', property: 'Lake House', customer: 'John Smith', date: 'Jan 9, 2026', priority: 'high' },
-    { id: '2', type: 'Grocery Stocking', property: 'Lake House', customer: 'John Smith', date: 'Jan 10, 2026', priority: 'normal' },
-    { id: '3', type: 'Maintenance', property: 'Sunset Cove', customer: 'Jane Doe', date: 'ASAP', priority: 'low' },
-  ]
+  if (!userData || !['admin', 'staff'].includes(userData.role)) {
+    redirect('/portal')
+  }
 
-  const overdueInvoices = [
-    { id: '1', customer: 'Bob Wilson', amount: 99, daysOverdue: 5 },
-    { id: '2', customer: 'Sarah Johnson', amount: 199, daysOverdue: 12 },
-    { id: '3', customer: 'Tom Brown', amount: 349, daysOverdue: 3 },
-  ]
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]
+  const nowTime = now.getTime()
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
 
-  const revenueChange = ((stats.revenueThisMonth - stats.revenueLastMonth) / stats.revenueLastMonth * 100).toFixed(1)
+  // Fetch real stats in parallel
+  const [
+    customersResult,
+    propertiesResult,
+    inspectionsTodayResult,
+    pendingRequestsResult,
+    overdueInvoicesResult,
+    thisMonthRevenueResult,
+    lastMonthRevenueResult,
+    todayScheduleResult,
+  ] = await Promise.all([
+    supabase.from('lwp_users').select('id', { count: 'exact' }).eq('role', 'customer'),
+    supabase.from('lwp_properties').select('id', { count: 'exact' }).eq('status', 'active'),
+    supabase.from('lwp_inspections').select('id', { count: 'exact' }).eq('scheduled_date', today),
+    supabase.from('lwp_service_requests').select('id', { count: 'exact' }).eq('status', 'pending'),
+    supabase.from('lwp_invoices').select('id, customer_id, total, due_date').eq('status', 'overdue'),
+    supabase.from('lwp_invoices').select('total').eq('status', 'paid').gte('paid_date', thisMonthStart),
+    supabase.from('lwp_invoices').select('total').eq('status', 'paid').gte('paid_date', lastMonthStart).lte('paid_date', lastMonthEnd),
+    supabase.from('lwp_inspections')
+      .select(`
+        id, scheduled_time, status,
+        property:lwp_properties!property_id(name, owner:lwp_users!owner_id(last_name)),
+        technician:lwp_users!technician_id(first_name, last_name)
+      `)
+      .eq('scheduled_date', today)
+      .order('scheduled_time')
+      .limit(5),
+  ])
+
+  // Get pending requests details
+  const { data: pendingRequestsData } = await supabase
+    .from('lwp_service_requests')
+    .select(`
+      id, request_type, priority, preferred_date, title,
+      property:lwp_properties!property_id(name),
+      requested_by:lwp_users!requested_by_id(first_name, last_name)
+    `)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(3)
+
+  // Get customer names for overdue invoices
+  const overdueWithCustomers = await Promise.all(
+    (overdueInvoicesResult.data || []).slice(0, 3).map(async (inv) => {
+      const { data: customer } = await supabase
+        .from('lwp_users')
+        .select('first_name, last_name')
+        .eq('id', inv.customer_id)
+        .single()
+      const daysOverdue = Math.floor((nowTime - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24))
+      return {
+        id: inv.id,
+        customer: customer ? `${customer.first_name} ${customer.last_name}` : 'Unknown',
+        amount: inv.total,
+        daysOverdue,
+      }
+    })
+  )
+
+  const thisMonthRevenue = thisMonthRevenueResult.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+  const lastMonthRevenue = lastMonthRevenueResult.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+  const revenueChange = lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1) : '0'
+
+  const stats = {
+    activeCustomers: customersResult.count || 0,
+    activeProperties: propertiesResult.count || 0,
+    inspectionsToday: inspectionsTodayResult.count || 0,
+    pendingRequests: pendingRequestsResult.count || 0,
+    overdueInvoices: overdueInvoicesResult.data?.length || 0,
+    revenueThisMonth: thisMonthRevenue,
+  }
+
+  const todaySchedule = (todayScheduleResult.data || []).map((item) => {
+    // Handle Supabase joins which may return arrays
+    const propData = item.property as unknown
+    const property = Array.isArray(propData) ? propData[0] : propData
+    const ownerData = property?.owner as unknown
+    const owner = Array.isArray(ownerData) ? ownerData[0] : ownerData
+    const techData = item.technician as unknown
+    const technician = Array.isArray(techData) ? techData[0] : techData
+    return {
+      id: String(item.id),
+      time: item.scheduled_time ? formatTime(item.scheduled_time) : 'TBD',
+      property: `${property?.name || 'Property'} - ${owner?.last_name || 'Owner'}`,
+      technician: technician ? `${technician.first_name} ${technician.last_name?.charAt(0)}.` : 'Unassigned',
+      status: item.status,
+    }
+  })
+
+  const pendingRequests = (pendingRequestsData || []).map((req) => {
+    const propData = req.property as unknown
+    const property = Array.isArray(propData) ? propData[0] : propData
+    const reqByData = req.requested_by as unknown
+    const requestedBy = Array.isArray(reqByData) ? reqByData[0] : reqByData
+    return {
+      id: String(req.id),
+      type: req.title || req.request_type,
+      property: property?.name || 'Property',
+      customer: requestedBy ? `${requestedBy.first_name} ${requestedBy.last_name}` : 'Customer',
+      date: req.preferred_date ? new Date(req.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'ASAP',
+      priority: req.priority,
+    }
+  })
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl lg:text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-[#a1a1aa]">
-          Welcome back. Here&apos;s what&apos;s happening today.
+          Welcome back{userData.first_name ? `, ${userData.first_name}` : ''}. Here&apos;s what&apos;s happening today.
         </p>
       </div>
 
@@ -123,25 +219,32 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {todaySchedule.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 p-3 bg-black/30 rounded-lg"
-              >
-                <div className="w-16 text-sm text-[#71717a]">{item.time}</div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{item.property}</p>
-                  <p className="text-xs text-[#71717a]">{item.technician}</p>
+          {todaySchedule.length > 0 ? (
+            <div className="space-y-3">
+              {todaySchedule.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 p-3 bg-black/30 rounded-lg"
+                >
+                  <div className="w-16 text-sm text-[#71717a]">{item.time}</div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{item.property}</p>
+                    <p className="text-xs text-[#71717a]">{item.technician}</p>
+                  </div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    item.status === 'completed' ? 'bg-green-500' :
+                    item.status === 'in_progress' ? 'bg-yellow-500' :
+                    'bg-[#27272a]'
+                  }`} />
                 </div>
-                <div className={`w-3 h-3 rounded-full ${
-                  item.status === 'completed' ? 'bg-green-500' :
-                  item.status === 'in_progress' ? 'bg-yellow-500' :
-                  'bg-[#27272a]'
-                }`} />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-[#71717a]">
+              <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No inspections scheduled today</p>
+            </div>
+          )}
         </div>
 
         {/* Pending Requests */}
@@ -156,26 +259,33 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {pendingRequests.map((item) => (
-              <Link
-                key={item.id}
-                href={`/manage/requests/${item.id}`}
-                className="flex items-center gap-4 p-3 bg-black/30 rounded-lg hover:bg-[#171717] transition-colors"
-              >
-                <div className={`w-2 h-2 rounded-full ${
-                  item.priority === 'high' ? 'bg-red-500' :
-                  item.priority === 'normal' ? 'bg-yellow-500' :
-                  'bg-[#71717a]'
-                }`} />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{item.type}</p>
-                  <p className="text-xs text-[#71717a]">{item.property} • {item.customer}</p>
-                </div>
-                <div className="text-xs text-[#71717a]">{item.date}</div>
-              </Link>
-            ))}
-          </div>
+          {pendingRequests.length > 0 ? (
+            <div className="space-y-3">
+              {pendingRequests.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/manage/requests/${item.id}`}
+                  className="flex items-center gap-4 p-3 bg-black/30 rounded-lg hover:bg-[#171717] transition-colors"
+                >
+                  <div className={`w-2 h-2 rounded-full ${
+                    item.priority === 'high' || item.priority === 'urgent' ? 'bg-red-500' :
+                    item.priority === 'normal' ? 'bg-yellow-500' :
+                    'bg-[#71717a]'
+                  }`} />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{item.type}</p>
+                    <p className="text-xs text-[#71717a]">{item.property} • {item.customer}</p>
+                  </div>
+                  <div className="text-xs text-[#71717a]">{item.date}</div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-[#71717a]">
+              <ClipboardList className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No pending requests</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -188,7 +298,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-2">
-            {overdueInvoices.map((invoice) => (
+            {overdueWithCustomers.map((invoice) => (
               <Link
                 key={invoice.id}
                 href={`/manage/invoices/${invoice.id}`}
@@ -213,4 +323,11 @@ export default function AdminDashboardPage() {
       )}
     </div>
   )
+}
+
+function formatTime(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number)
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours
+  return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`
 }
