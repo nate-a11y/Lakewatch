@@ -35,8 +35,14 @@ function LoginForm() {
       return
     }
 
-    // Determine redirect based on user role
-    const role = data.user?.user_metadata?.role || 'customer'
+    // Fetch user role from database for accurate routing
+    const { data: dbUser } = await supabase
+      .from('lwp_users')
+      .select('role')
+      .eq('supabase_id', data.user?.id)
+      .single()
+
+    const role = dbUser?.role || data.user?.user_metadata?.role || 'customer'
     let targetPath = redirect
 
     // If no explicit redirect, use role-based default

@@ -11,12 +11,12 @@ import {
   User,
   Thermometer,
   Cloud,
-  Camera,
   Check,
   X,
   AlertCircle,
 } from 'lucide-react'
 import DownloadPDFButton from './DownloadPDFButton'
+import ReportPhotoGallery from './ReportPhotoGallery'
 
 export default async function ReportDetailPage({
   params,
@@ -297,34 +297,8 @@ export default async function ReportDetailPage({
         </section>
       )}
 
-      {/* Photos */}
-      {report.photos.length > 0 && (
-        <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-[#4cbb17]" />
-            Photos ({report.photos.length})
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {report.photos.map((photo: { id?: string; caption?: string; url?: string }, idx: number) => (
-              <div key={photo.id || idx} className="aspect-video bg-[#27272a] rounded-lg overflow-hidden relative group cursor-pointer">
-                {photo.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.url} alt={photo.caption || 'Inspection photo'} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[#71717a]">
-                    <Camera className="w-8 h-8" />
-                  </div>
-                )}
-                {photo.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                    <p className="text-xs text-white">{photo.caption}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Photos with Lightbox */}
+      <ReportPhotoGallery photos={report.photos} />
     </div>
   )
 }
