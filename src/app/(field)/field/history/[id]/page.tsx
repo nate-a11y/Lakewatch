@@ -5,8 +5,8 @@ import {
   XCircle,
   AlertTriangle,
   Camera,
-  Download,
 } from 'lucide-react'
+import DownloadButton from '@/components/buttons/DownloadButton'
 
 export default async function InspectionHistoryDetailPage({
   params,
@@ -169,10 +169,11 @@ export default async function InspectionHistoryDetailPage({
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#27272a] rounded-xl hover:bg-[#27272a] transition-colors">
-          <Download className="w-5 h-5" />
-          Download PDF
-        </button>
+        <DownloadButton
+          label="Download PDF"
+          fileName={`inspection-${id}`}
+          className="flex-1 px-4 py-3 border border-[#27272a] rounded-xl hover:bg-[#27272a]"
+        />
         <Link
           href={`/field/inspect/${id}`}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#27272a] rounded-xl hover:bg-[#3f3f46] transition-colors"

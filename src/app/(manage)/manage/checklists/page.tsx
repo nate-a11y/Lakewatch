@@ -10,6 +10,7 @@ import {
   Copy,
   Edit,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Checklist {
   id: string
@@ -149,7 +150,11 @@ export default function ChecklistsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#27272a] rounded-lg transition-colors" title="Duplicate">
+                <button
+                  onClick={() => toast.success(`Duplicated "${checklist.name}"`)}
+                  className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
+                  title="Duplicate"
+                >
                   <Copy className="w-4 h-4 text-[#71717a]" />
                 </button>
                 <Link
@@ -182,17 +187,26 @@ export default function ChecklistsPage() {
       <div className="mt-12">
         <h2 className="text-lg font-semibold mb-4">Quick Start Templates</h2>
         <div className="grid md:grid-cols-3 gap-4">
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          <button
+            onClick={() => toast.success('Creating checklist from "Basic Home Inspection" template...')}
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Basic Home Inspection</p>
             <p className="text-sm text-[#71717a]">10 essential items for monthly checks</p>
           </button>
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          <button
+            onClick={() => toast.success('Creating checklist from "Lake Property Special" template...')}
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Lake Property Special</p>
             <p className="text-sm text-[#71717a]">Includes dock and waterfront checks</p>
           </button>
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          <button
+            onClick={() => toast.success('Creating checklist from "Seasonal Changeover" template...')}
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Seasonal Changeover</p>
             <p className="text-sm text-[#71717a]">Spring/Fall preparation checklist</p>

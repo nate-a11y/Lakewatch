@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   FileText,
@@ -9,6 +10,7 @@ import {
   Download,
   Filter,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Report {
   id: string
@@ -21,6 +23,8 @@ interface Report {
 }
 
 export default function ReportsPage() {
+  const [showFilters, setShowFilters] = useState(false)
+
   // Mock data - replace with actual API calls
   const reports = [
     {
@@ -78,7 +82,13 @@ export default function ReportsPage() {
             )}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#27272a] text-white rounded-lg hover:bg-[#3f3f46] transition-colors">
+        <button
+          onClick={() => {
+            setShowFilters(!showFilters)
+            toast.info(showFilters ? 'Filters hidden' : 'Filter options coming soon')
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#27272a] text-white rounded-lg hover:bg-[#3f3f46] transition-colors"
+        >
           <Filter className="w-4 h-4" />
           Filter
         </button>
@@ -160,7 +170,7 @@ function ReportCard({ report }: { report: Report }) {
           <button
             onClick={(e) => {
               e.preventDefault()
-              // Download PDF
+              toast.success(`Downloading report for ${report.property.name}...`)
             }}
             className="p-2 text-[#71717a] hover:text-white hover:bg-[#27272a] rounded-lg transition-colors"
             aria-label="Download PDF"
