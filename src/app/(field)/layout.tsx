@@ -17,16 +17,19 @@ export default async function FieldLayout({
     redirect('/login?redirect=/field')
   }
 
-  // In production, verify user has technician role
-  // const { data: profile } = await supabase
-  //   .from('lwp_users')
-  //   .select('role')
-  //   .eq('supabase_id', user.id)
-  //   .single()
-  //
-  // if (!profile || !['technician', 'admin', 'owner'].includes(profile.role)) {
-  //   redirect('/portal')
-  // }
+  // Fetch user role from database
+  const { data: dbUser } = await supabase
+    .from('lwp_users')
+    .select('role, first_name, last_name')
+    .eq('supabase_id', user.id)
+    .single()
+
+  const role = dbUser?.role || user.user_metadata?.role || 'customer'
+
+  // Only allow technicians, admins, and owners access to field portal
+  if (!['technician', 'admin', 'owner'].includes(role)) {
+    redirect('/portal')
+  }
 
   return (
     <html lang="en">

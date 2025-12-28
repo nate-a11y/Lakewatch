@@ -17,11 +17,28 @@ export default async function PortalLayout({
     redirect('/login')
   }
 
+  // Fetch user role from database
+  const { data: dbUser } = await supabase
+    .from('lwp_users')
+    .select('role, first_name, last_name')
+    .eq('supabase_id', user.id)
+    .single()
+
+  const role = dbUser?.role || user.user_metadata?.role || 'customer'
+
+  // Redirect owners and admins to /manage, technicians to /field
+  if (role === 'owner' || role === 'admin') {
+    redirect('/manage')
+  }
+  if (role === 'technician') {
+    redirect('/field')
+  }
+
   const userData = {
     email: user.email || '',
-    firstName: user.user_metadata?.first_name || '',
-    lastName: user.user_metadata?.last_name || '',
-    role: user.user_metadata?.role || 'customer',
+    firstName: dbUser?.first_name || user.user_metadata?.first_name || '',
+    lastName: dbUser?.last_name || user.user_metadata?.last_name || '',
+    role: role,
   }
 
   return (
