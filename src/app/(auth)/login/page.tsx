@@ -24,7 +24,7 @@ function LoginForm() {
 
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -35,7 +35,20 @@ function LoginForm() {
       return
     }
 
-    router.push(redirect)
+    // Determine redirect based on user role
+    const role = data.user?.user_metadata?.role || 'customer'
+    let targetPath = redirect
+
+    // If no explicit redirect, use role-based default
+    if (redirect === '/portal') {
+      if (role === 'admin' || role === 'owner') {
+        targetPath = '/manage'
+      } else if (role === 'technician') {
+        targetPath = '/field'
+      }
+    }
+
+    router.push(targetPath)
     router.refresh()
   }
 
