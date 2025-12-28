@@ -1,12 +1,6 @@
-import { Geist } from 'next/font/google'
 import { Header, Footer } from '@/components/layout'
 import { LocalBusinessSchema, OrganizationSchema } from '@/components/seo/schema'
 import '../globals.css'
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-})
 
 export default function FrontendLayout({
   children,
@@ -14,12 +8,12 @@ export default function FrontendLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={geist.variable}>
+    <html lang="en">
       <head>
         <LocalBusinessSchema />
         <OrganizationSchema />
       </head>
-      <body className="min-h-screen bg-[#060606] text-white antialiased">
+      <body className="min-h-screen bg-[#060606] text-white antialiased font-sans">
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

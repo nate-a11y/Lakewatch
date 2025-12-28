@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Testimonials: CollectionConfig = {
   slug: 'testimonials',
+  dbName: 'lwp_testimonials',
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'location', 'createdAt'],

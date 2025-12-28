@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const FAQs: CollectionConfig = {
   slug: 'faqs',
+  dbName: 'lwp_faqs',
   admin: {
     useAsTitle: 'question',
     defaultColumns: ['question', 'category', 'order'],

@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Team: CollectionConfig = {
   slug: 'team',
+  dbName: 'lwp_team',
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'role', 'order'],

@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  dbName: 'lwp_users',
   admin: {
     useAsTitle: 'email',
     group: 'Admin',

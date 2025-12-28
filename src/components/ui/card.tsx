@@ -1,12 +1,12 @@
 import { cn } from '@/lib/utils'
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
   className?: string
   hover?: boolean
 }
 
-export function Card({ children, className, hover = false }: CardProps) {
+export function Card({ children, className, hover = false, ...props }: CardProps) {
   return (
     <div
       className={cn(
@@ -14,6 +14,7 @@ export function Card({ children, className, hover = false }: CardProps) {
         hover && 'transition-all duration-300 hover:border-[#4cbb17]/50 hover:shadow-lg hover:shadow-[#4cbb17]/10',
         className
       )}
+      {...props}
     >
       {children}
     </div>
