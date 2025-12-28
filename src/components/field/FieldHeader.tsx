@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { User as UserType } from '@supabase/supabase-js'
-import { Bell, User } from 'lucide-react'
+import { User } from 'lucide-react'
+import { NotificationsDropdown } from '@/components/shared/NotificationsDropdown'
 
 interface FieldHeaderProps {
   user: UserType
@@ -23,10 +24,7 @@ export default function FieldHeader({}: FieldHeaderProps) {
           <h1 className="text-lg font-bold text-[#4cbb17]">Lake Watch Pros</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button className="relative p-2 hover:bg-[#27272a] rounded-lg transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#4cbb17] rounded-full" />
-          </button>
+          <NotificationsDropdown portal="field" />
           <Link
             href="/field/profile"
             className="w-9 h-9 bg-[#4cbb17]/10 rounded-full flex items-center justify-center text-[#4cbb17]"

@@ -146,10 +146,13 @@ export default function SchedulePage() {
             Manage inspections and service appointments
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
+        <Link
+          href="/manage/schedule/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+        >
           <Plus className="w-5 h-5" />
           Schedule Inspection
-        </button>
+        </Link>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -307,9 +310,9 @@ export default function SchedulePage() {
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 text-[#27272a] mx-auto mb-3" />
                 <p className="text-[#71717a]">No scheduled items</p>
-                <button className="mt-4 text-sm text-[#4cbb17] hover:underline">
+                <Link href="/manage/schedule/new" className="mt-4 text-sm text-[#4cbb17] hover:underline inline-block">
                   + Add inspection
-                </button>
+                </Link>
               </div>
             )}
           </div>

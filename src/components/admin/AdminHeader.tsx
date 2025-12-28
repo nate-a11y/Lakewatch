@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bell, ChevronDown, LogOut, Settings, User, Shield } from 'lucide-react'
+import { ChevronDown, LogOut, Settings, User, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getInitials } from '@/lib/utils'
+import { NotificationsDropdown } from '@/components/shared/NotificationsDropdown'
 
 interface AdminHeaderProps {
   user: {
@@ -56,13 +57,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
         {/* Right side */}
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <button
-            className="relative p-2 rounded-lg hover:bg-[#27272a] transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-[#a1a1aa]" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+          <NotificationsDropdown portal="admin" />
 
           {/* User menu */}
           <div className="relative" ref={dropdownRef}>

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminNav } from '@/components/admin/AdminNav'
 import { AdminHeader } from '@/components/admin/AdminHeader'
+import { CommandPalette } from '@/components/admin/CommandPalette'
 import { ToastProvider } from '@/components/providers'
 import '../globals.css'
 
@@ -46,6 +47,7 @@ export default async function ManageLayout({
     <html lang="en">
       <body className="min-h-screen bg-[#060606] text-white antialiased font-sans">
         <ToastProvider />
+        <CommandPalette />
         <div className="min-h-screen flex">
           <AdminNav />
           <div className="flex-1 flex flex-col lg:ml-64">
