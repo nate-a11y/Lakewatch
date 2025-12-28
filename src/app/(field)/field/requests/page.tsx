@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   Wrench,
   Building2,
   Clock,
   CheckCircle,
   Calendar,
-  Phone,
   MapPin,
-  Play,
-  Check,
+  ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -188,10 +187,11 @@ export default function TechnicianRequestsPage() {
       {/* Requests List */}
       <div className="space-y-3">
         {filteredRequests.map(request => (
-          <div
+          <Link
             key={request.id}
+            href={`/field/requests/${request.id}`}
             className={cn(
-              'bg-[#0f0f0f] border rounded-xl overflow-hidden',
+              'block bg-[#0f0f0f] border rounded-xl overflow-hidden hover:border-[#4cbb17]/50 transition-colors',
               request.status === 'completed'
                 ? 'border-[#27272a] opacity-60'
                 : request.priority === 'urgent'
@@ -234,53 +234,41 @@ export default function TechnicianRequestsPage() {
               </div>
 
               {request.notes && (
-                <p className="text-sm text-[#a1a1aa] p-3 bg-black/30 rounded-lg mb-3">
+                <p className="text-sm text-[#a1a1aa] p-3 bg-black/30 rounded-lg mb-3 line-clamp-2">
                   {request.notes}
                 </p>
               )}
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex items-center justify-between">
                 {request.status === 'assigned' && (
-                  <>
-                    <a
-                      href={`https://maps.google.com/?q=${encodeURIComponent(request.property.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-[#27272a] rounded-lg text-sm hover:bg-[#27272a] transition-colors"
+                  <div className="flex items-center gap-2">
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault()
+                        window.open(`https://maps.google.com/?q=${encodeURIComponent(request.property.address)}`, '_blank')
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-[#27272a] rounded-lg text-xs hover:bg-[#27272a] transition-colors"
                     >
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-3 h-3" />
                       Navigate
-                    </a>
-                    <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#4cbb17] text-black rounded-lg text-sm font-medium hover:bg-[#60e421] transition-colors">
-                      <Play className="w-4 h-4" />
-                      Start
-                    </button>
-                  </>
+                    </span>
+                    <span className="text-xs text-[#4cbb17] font-medium">Tap to start</span>
+                  </div>
                 )}
                 {request.status === 'in_progress' && (
-                  <>
-                    <a
-                      href={`tel:${request.property.ownerPhone}`}
-                      className="flex items-center justify-center gap-2 px-3 py-2 border border-[#27272a] rounded-lg text-sm hover:bg-[#27272a] transition-colors"
-                    >
-                      <Phone className="w-4 h-4" />
-                    </a>
-                    <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#4cbb17] text-black rounded-lg text-sm font-medium hover:bg-[#60e421] transition-colors">
-                      <Check className="w-4 h-4" />
-                      Mark Complete
-                    </button>
-                  </>
+                  <span className="text-xs text-yellow-500 font-medium">In progress - tap to complete</span>
                 )}
                 {request.status === 'completed' && (
-                  <div className="flex items-center gap-2 text-green-500 text-sm">
+                  <div className="flex items-center gap-2 text-green-500 text-xs">
                     <CheckCircle className="w-4 h-4" />
                     Completed
                   </div>
                 )}
+                <ChevronRight className="w-5 h-5 text-[#71717a]" />
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
