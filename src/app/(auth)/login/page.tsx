@@ -35,22 +35,12 @@ function LoginForm() {
       return
     }
 
-    // Fetch user role from database for accurate routing
-    // Try supabase_id first, then email as fallback
-    let { data: dbUser } = await supabase
+    // Fetch user role from database using email (most reliable)
+    const { data: dbUser } = await supabase
       .from('lwp_users')
       .select('role')
-      .eq('supabase_id', data.user?.id)
+      .eq('email', data.user?.email)
       .single()
-
-    if (!dbUser && data.user?.email) {
-      const { data: emailUser } = await supabase
-        .from('lwp_users')
-        .select('role')
-        .eq('email', data.user.email)
-        .single()
-      dbUser = emailUser
-    }
 
     const role = dbUser?.role || data.user?.user_metadata?.role || 'customer'
     let targetPath = redirect
