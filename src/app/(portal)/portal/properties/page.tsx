@@ -89,7 +89,7 @@ export default async function PropertiesPage() {
           </p>
         </div>
         <Link
-          href="/portal/properties/add"
+          href="/portal/properties/new"
           className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
         >
           <Plus className="w-5 h-5" />
@@ -126,7 +126,7 @@ export default async function PropertiesPage() {
             Add your first property to get started with Lake Watch Pros
           </p>
           <Link
-            href="/portal/properties/add"
+            href="/portal/properties/new"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
           >
             <Plus className="w-5 h-5" />

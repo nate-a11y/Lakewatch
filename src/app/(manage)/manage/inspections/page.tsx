@@ -1,9 +1,6 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   ClipboardCheck,
   User,
@@ -13,118 +10,86 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react'
+import InspectionFilters from './InspectionFilters'
 
-interface Inspection {
-  id: string
-  property: {
-    id: string
-    name: string
-    address: string
+export default async function InspectionsPage() {
+  const supabase = await createClient()
+
+  // Fetch inspections with related data
+  const { data: inspections, error } = await supabase
+    .from('lwp_inspections')
+    .select(`
+      id, scheduled_date, scheduled_time, status, overall_status,
+      property:lwp_properties(id, name, street, owner_id, owner:lwp_users!owner_id(first_name, last_name)),
+      technician:lwp_users!technician_id(id, first_name, last_name),
+      checklist:lwp_checklists(name),
+      issues:lwp_inspections_issues(count)
+    `)
+    .order('scheduled_date', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('Error fetching inspections:', error)
   }
-  customer: {
-    id: string
-    name: string
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
   }
-  technician: {
-    id: string
-    name: string
+
+  const formatTime = (timeStr: string | null) => {
+    if (!timeStr) return ''
+    const [hours, minutes] = timeStr.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 || 12
+    return `${displayHour}:${minutes} ${ampm}`
   }
-  date: string
-  time: string
-  status: 'scheduled' | 'in_progress' | 'completed' | 'missed'
-  issues: number
-  checklist: string
-}
 
-export default function InspectionsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<string>('all')
+  const inspectionsList = (inspections || []).map((i) => {
+    const propertyData = i.property as { id: number; name: string; street: string; owner: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null } | { id: number; name: string; street: string; owner: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null }[] | null
+    const property = Array.isArray(propertyData) ? propertyData[0] : propertyData
 
-  // Mock data
-  const inspections: Inspection[] = [
-    {
-      id: '1',
-      property: { id: '1', name: 'Lake House', address: '123 Lakefront Dr' },
-      customer: { id: '5', name: 'John Smith' },
-      technician: { id: '3', name: 'Mike Johnson' },
-      date: 'Jan 3, 2026',
-      time: '9:00 AM',
-      status: 'scheduled',
-      issues: 0,
-      checklist: 'Premium Weekly',
-    },
-    {
-      id: '2',
-      property: { id: '3', name: 'Sunset Cove', address: '456 Marina Way' },
-      customer: { id: '6', name: 'Jane Doe' },
-      technician: { id: '4', name: 'Sarah Tech' },
-      date: 'Jan 4, 2026',
-      time: '10:00 AM',
-      status: 'scheduled',
-      issues: 0,
-      checklist: 'Premium Weekly',
-    },
-    {
-      id: '3',
-      property: { id: '1', name: 'Lake House', address: '123 Lakefront Dr' },
-      customer: { id: '5', name: 'John Smith' },
-      technician: { id: '3', name: 'Mike Johnson' },
-      date: 'Dec 27, 2025',
-      time: '9:00 AM',
-      status: 'completed',
-      issues: 0,
-      checklist: 'Premium Weekly',
-    },
-    {
-      id: '4',
-      property: { id: '2', name: 'Guest Cabin', address: '125 Lakefront Dr' },
-      customer: { id: '5', name: 'John Smith' },
-      technician: { id: '3', name: 'Mike Johnson' },
-      date: 'Dec 20, 2025',
-      time: '10:30 AM',
-      status: 'completed',
-      issues: 1,
-      checklist: 'Standard Bi-Weekly',
-    },
-    {
-      id: '5',
-      property: { id: '4', name: 'Hillside Retreat', address: '789 Hill Rd' },
-      customer: { id: '7', name: 'Bob Wilson' },
-      technician: { id: '4', name: 'Sarah Tech' },
-      date: 'Dec 10, 2025',
-      time: '2:00 PM',
-      status: 'completed',
-      issues: 2,
-      checklist: 'Basic Monthly',
-    },
-    {
-      id: '6',
-      property: { id: '8', name: 'The Brown House', address: '400 Oak St' },
-      customer: { id: '9', name: 'Tom Brown' },
-      technician: { id: '3', name: 'Mike Johnson' },
-      date: 'Dec 5, 2025',
-      time: '11:00 AM',
-      status: 'missed',
-      issues: 0,
-      checklist: 'Standard Bi-Weekly',
-    },
-  ]
+    const techData = i.technician as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+    const technician = Array.isArray(techData) ? techData[0] : techData
 
-  const filteredInspections = inspections.filter(inspection => {
-    const matchesSearch =
-      inspection.property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inspection.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inspection.technician.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || inspection.status === statusFilter
-    return matchesSearch && matchesStatus
+    const checklistData = i.checklist as { name: string } | { name: string }[] | null
+    const checklist = Array.isArray(checklistData) ? checklistData[0] : checklistData
+
+    const ownerData = property?.owner
+    const owner = Array.isArray(ownerData) ? ownerData[0] : ownerData
+
+    const issuesData = i.issues as { count: number }[] | null
+    const issueCount = issuesData?.[0]?.count || 0
+
+    return {
+      id: i.id,
+      property: {
+        id: property?.id || 0,
+        name: property?.name || 'Unknown',
+        address: property?.street || '',
+      },
+      customer: {
+        name: owner ? `${owner.first_name} ${owner.last_name}` : 'Unknown',
+      },
+      technician: {
+        id: technician?.id || 0,
+        name: technician ? `${technician.first_name} ${technician.last_name}` : 'Unassigned',
+      },
+      date: formatDate(i.scheduled_date),
+      time: formatTime(i.scheduled_time),
+      status: i.status as string,
+      issues: issueCount,
+      checklist: checklist?.name || 'Default',
+    }
   })
 
   const stats = {
-    scheduled: inspections.filter(i => i.status === 'scheduled').length,
-    completed: inspections.filter(i => i.status === 'completed').length,
-    withIssues: inspections.filter(i => i.issues > 0).length,
-    missed: inspections.filter(i => i.status === 'missed').length,
+    scheduled: inspectionsList.filter(i => i.status === 'scheduled').length,
+    completed: inspectionsList.filter(i => i.status === 'completed').length,
+    withIssues: inspectionsList.filter(i => i.issues > 0).length,
+    missed: inspectionsList.filter(i => i.status === 'missed').length,
   }
 
   const getStatusIcon = (status: string) => {
@@ -148,13 +113,16 @@ export default function InspectionsPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Inspections</h1>
           <p className="text-[#a1a1aa]">
-            Track and manage property inspections
+            Track and manage property inspections ({inspectionsList.length} total)
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
+        <Link
+          href="/manage/schedule/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+        >
           <Plus className="w-5 h-5" />
           Schedule Inspection
-        </button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -189,42 +157,7 @@ export default function InspectionsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-          <input
-            type="text"
-            placeholder="Search inspections..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Status</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="missed">Missed</option>
-          </select>
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-          </select>
-        </div>
-      </div>
+      <InspectionFilters />
 
       {/* Inspections List */}
       <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl overflow-hidden">
@@ -241,7 +174,7 @@ export default function InspectionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#27272a]">
-              {filteredInspections.map((inspection) => (
+              {inspectionsList.map((inspection) => (
                 <tr key={inspection.id} className="hover:bg-[#171717] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -301,7 +234,7 @@ export default function InspectionsPage() {
           </table>
         </div>
 
-        {filteredInspections.length === 0 && (
+        {inspectionsList.length === 0 && (
           <div className="text-center py-12">
             <ClipboardCheck className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
             <p className="text-[#71717a]">No inspections found</p>

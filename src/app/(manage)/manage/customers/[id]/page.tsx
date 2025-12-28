@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -8,6 +10,8 @@ import {
   MessageSquare,
   Edit,
 } from 'lucide-react'
+import EditableNotes from '@/components/EditableNotes'
+import CustomerActionButtons from './CustomerActionButtons'
 
 export default async function CustomerDetailPage({
   params,
@@ -15,37 +19,68 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const supabase = await createClient()
 
-  // Mock data - replace with actual API call
-  const customer = {
-    id,
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.customer@example.com',
-    phone: '(314) 555-1001',
-    role: 'customer',
-    createdAt: 'June 15, 2024',
-    status: 'active',
-    stripeCustomerId: 'cus_abc123',
-    properties: [
-      { id: '1', name: 'Lake House', address: '123 Lakefront Dr, Lake Ozark, MO', plan: 'Premium', status: 'active' },
-      { id: '2', name: 'Guest Cabin', address: '125 Lakefront Dr, Lake Ozark, MO', plan: 'Standard', status: 'active' },
-    ],
-    recentInvoices: [
-      { id: '1', number: 'INV-2026-001', amount: 349, status: 'pending', date: 'Jan 1, 2026' },
-      { id: '2', number: 'INV-2025-001', amount: 349, status: 'paid', date: 'Dec 1, 2025' },
-      { id: '3', number: 'INV-2025-002', amount: 199, status: 'paid', date: 'Dec 1, 2025' },
-    ],
-    recentActivity: [
-      { id: '1', action: 'Inspection completed', property: 'Lake House', date: 'Dec 20, 2025' },
-      { id: '2', action: 'Service request submitted', property: 'Lake House', date: 'Dec 18, 2025' },
-      { id: '3', action: 'Invoice paid', property: null, date: 'Dec 10, 2025' },
-    ],
-    notes: 'VIP customer - always responds quickly. Prefers email communication.',
+  // Fetch customer data
+  const { data: customer, error } = await supabase
+    .from('lwp_users')
+    .select('*')
+    .eq('id', id)
+    .eq('role', 'customer')
+    .single()
+
+  if (error || !customer) {
+    notFound()
   }
 
-  const totalMonthly = customer.properties.reduce((acc, p) => {
-    return acc + (p.plan === 'Premium' ? 349 : p.plan === 'Standard' ? 199 : 99)
+  // Fetch customer's properties with service plans
+  const { data: properties } = await supabase
+    .from('lwp_properties')
+    .select(`
+      id, name, street, city, state, status,
+      service_plan:lwp_service_plans(name)
+    `)
+    .eq('owner_id', id)
+    .order('name')
+
+  // Fetch recent invoices
+  const { data: invoices } = await supabase
+    .from('lwp_invoices')
+    .select('id, invoice_number, total, status, issue_date')
+    .eq('customer_id', id)
+    .order('issue_date', { ascending: false })
+    .limit(5)
+
+  // Fetch recent activity (inspections and requests)
+  const { data: recentInspections } = await supabase
+    .from('lwp_inspections')
+    .select(`
+      id, scheduled_date, status,
+      property:lwp_properties(name)
+    `)
+    .in('property_id', properties?.map(p => p.id) || [0])
+    .order('scheduled_date', { ascending: false })
+    .limit(3)
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
+  }
+
+  const transformedProperties = (properties || []).map(p => {
+    const planData = p.service_plan as { name: string } | { name: string }[] | null
+    const planName = Array.isArray(planData) ? planData[0]?.name : planData?.name
+    return {
+      ...p,
+      plan: planName || 'No plan',
+      address: `${p.street}, ${p.city}, ${p.state}`,
+    }
+  })
+
+  const totalMonthly = transformedProperties.reduce((acc, p) => {
+    const planPrices: Record<string, number> = { 'Premium': 349, 'Standard': 199, 'Basic': 99 }
+    return acc + (planPrices[p.plan] || 0)
   }, 0)
 
   return (
@@ -62,11 +97,11 @@ export default async function CustomerDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-[#4cbb17]/10 rounded-xl flex items-center justify-center text-[#4cbb17] text-xl font-bold">
-            {customer.firstName[0]}{customer.lastName[0]}
+            {(customer.first_name?.[0] || '?')}{(customer.last_name?.[0] || '')}
           </div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold mb-1">
-              {customer.firstName} {customer.lastName}
+              {customer.first_name} {customer.last_name}
             </h1>
             <div className="flex items-center gap-3 text-[#a1a1aa]">
               <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -74,21 +109,13 @@ export default async function CustomerDetailPage({
                   ? 'bg-green-500/10 text-green-500'
                   : 'bg-[#27272a] text-[#71717a]'
               }`}>
-                {customer.status}
+                {customer.status || 'active'}
               </span>
-              <span className="text-sm">Customer since {customer.createdAt}</span>
+              <span className="text-sm">Customer since {formatDate(customer.created_at)}</span>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="p-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <MessageSquare className="w-5 h-5" />
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Edit className="w-4 h-4" />
-            Edit
-          </button>
-        </div>
+        <CustomerActionButtons customerId={id} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -109,7 +136,7 @@ export default async function CustomerDetailPage({
                 <Phone className="w-5 h-5 text-[#71717a]" />
                 <div>
                   <p className="text-sm text-[#71717a]">Phone</p>
-                  <p>{customer.phone}</p>
+                  <p>{customer.phone || 'Not provided'}</p>
                 </div>
               </div>
             </div>
@@ -118,11 +145,16 @@ export default async function CustomerDetailPage({
           {/* Properties */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Properties ({customer.properties.length})</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Add property</button>
+              <h2 className="text-lg font-semibold">Properties ({transformedProperties.length})</h2>
+              <Link
+                href={`/manage/properties/new?customer=${id}`}
+                className="text-sm text-[#4cbb17] hover:underline"
+              >
+                Add property
+              </Link>
             </div>
             <div className="space-y-3">
-              {customer.properties.map((property) => (
+              {transformedProperties.length > 0 ? transformedProperties.map((property) => (
                 <Link
                   key={property.id}
                   href={`/manage/properties/${property.id}`}
@@ -143,7 +175,9 @@ export default async function CustomerDetailPage({
                     {property.plan}
                   </span>
                 </Link>
-              ))}
+              )) : (
+                <p className="text-[#71717a] text-sm py-4 text-center">No properties yet</p>
+              )}
             </div>
           </section>
 
@@ -156,7 +190,7 @@ export default async function CustomerDetailPage({
               </Link>
             </div>
             <div className="space-y-2">
-              {customer.recentInvoices.map((invoice) => (
+              {invoices && invoices.length > 0 ? invoices.map((invoice) => (
                 <Link
                   key={invoice.id}
                   href={`/manage/invoices/${invoice.id}`}
@@ -165,22 +199,24 @@ export default async function CustomerDetailPage({
                   <div className="flex items-center gap-3">
                     <FileText className="w-4 h-4 text-[#71717a]" />
                     <div>
-                      <p className="text-sm font-medium">{invoice.number}</p>
-                      <p className="text-xs text-[#71717a]">{invoice.date}</p>
+                      <p className="text-sm font-medium">{invoice.invoice_number}</p>
+                      <p className="text-xs text-[#71717a]">{formatDate(invoice.issue_date)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-medium">${invoice.amount}</span>
+                    <span className="font-medium">${invoice.total}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       invoice.status === 'paid' ? 'bg-green-500/10 text-green-500' :
-                      invoice.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
+                      invoice.status === 'pending' || invoice.status === 'sent' ? 'bg-yellow-500/10 text-yellow-500' :
                       'bg-red-500/10 text-red-500'
                     }`}>
                       {invoice.status}
                     </span>
                   </div>
                 </Link>
-              ))}
+              )) : (
+                <p className="text-[#71717a] text-sm py-4 text-center">No invoices yet</p>
+              )}
             </div>
           </section>
         </div>
@@ -197,39 +233,50 @@ export default async function CustomerDetailPage({
               </div>
               <div className="flex justify-between">
                 <span className="text-[#71717a]">Properties</span>
-                <span>{customer.properties.length}</span>
+                <span>{transformedProperties.length}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#71717a]">Payment Method</span>
-                <span>•••• 4242</span>
-              </div>
+              {customer.stripe_customer_id && (
+                <div className="flex justify-between">
+                  <span className="text-[#71717a]">Payment Method</span>
+                  <span>•••• 4242</span>
+                </div>
+              )}
             </div>
-            <button className="w-full mt-4 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors text-sm">
-              Manage Billing
-            </button>
+            <Link
+              href={`/manage/invoices/new?customer=${id}`}
+              className="block w-full mt-4 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors text-sm text-center"
+            >
+              Create Invoice
+            </Link>
           </section>
 
-          {/* Notes */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
-            </div>
-            <p className="text-sm text-[#a1a1aa]">{customer.notes}</p>
-          </section>
+          {/* Notes - using EditableNotes component */}
+          <EditableNotes
+            initialNotes=""
+            title="Notes"
+            placeholder="Add customer notes..."
+          />
 
           {/* Recent Activity */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
             <div className="space-y-3">
-              {customer.recentActivity.map((activity) => (
-                <div key={activity.id} className="text-sm">
-                  <p className="font-medium">{activity.action}</p>
-                  <p className="text-[#71717a]">
-                    {activity.property && `${activity.property} • `}{activity.date}
-                  </p>
-                </div>
-              ))}
+              {recentInspections && recentInspections.length > 0 ? recentInspections.map((inspection) => {
+                const propertyData = inspection.property as { name: string } | { name: string }[] | null
+                const propertyName = Array.isArray(propertyData) ? propertyData[0]?.name : propertyData?.name
+                return (
+                  <div key={inspection.id} className="text-sm">
+                    <p className="font-medium">
+                      Inspection {inspection.status === 'completed' ? 'completed' : 'scheduled'}
+                    </p>
+                    <p className="text-[#71717a]">
+                      {propertyName} • {formatDate(inspection.scheduled_date)}
+                    </p>
+                  </div>
+                )
+              }) : (
+                <p className="text-[#71717a] text-sm">No recent activity</p>
+              )}
             </div>
           </section>
         </div>

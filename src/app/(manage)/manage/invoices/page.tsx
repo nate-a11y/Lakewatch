@@ -1,9 +1,6 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   FileText,
   DollarSign,
@@ -11,116 +8,72 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Download,
 } from 'lucide-react'
+import InvoiceFilters from './InvoiceFilters'
 
-interface Invoice {
-  id: string
-  number: string
-  customer: {
-    id: string
-    name: string
+export default async function InvoicesPage() {
+  const supabase = await createClient()
+
+  // Fetch invoices with related data
+  const { data: invoices, error } = await supabase
+    .from('lwp_invoices')
+    .select(`
+      id, invoice_number, status, issue_date, due_date, paid_date, subtotal, tax, total,
+      customer:lwp_users!customer_id(id, first_name, last_name),
+      property:lwp_properties(id, name)
+    `)
+    .order('issue_date', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('Error fetching invoices:', error)
   }
-  property: {
-    id: string
-    name: string
-  } | null
-  amount: number
-  status: 'draft' | 'pending' | 'paid' | 'overdue' | 'cancelled'
-  dueDate: string
-  issuedDate: string
-  type: 'subscription' | 'service' | 'one-time'
-}
 
-export default function InvoicesPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
+  }
 
-  // Mock data
-  const invoices: Invoice[] = [
-    {
-      id: '1',
-      number: 'INV-2026-001',
-      customer: { id: '5', name: 'John Smith' },
-      property: { id: '1', name: 'Lake House' },
-      amount: 349,
-      status: 'pending',
-      dueDate: 'Jan 15, 2026',
-      issuedDate: 'Jan 1, 2026',
-      type: 'subscription',
-    },
-    {
-      id: '2',
-      number: 'INV-2026-002',
-      customer: { id: '5', name: 'John Smith' },
-      property: { id: '2', name: 'Guest Cabin' },
-      amount: 199,
-      status: 'pending',
-      dueDate: 'Jan 15, 2026',
-      issuedDate: 'Jan 1, 2026',
-      type: 'subscription',
-    },
-    {
-      id: '3',
-      number: 'INV-2025-089',
-      customer: { id: '6', name: 'Jane Doe' },
-      property: { id: '3', name: 'Sunset Cove' },
-      amount: 349,
-      status: 'paid',
-      dueDate: 'Dec 15, 2025',
-      issuedDate: 'Dec 1, 2025',
-      type: 'subscription',
-    },
-    {
-      id: '4',
-      number: 'INV-2025-090',
-      customer: { id: '7', name: 'Bob Wilson' },
-      property: { id: '4', name: 'Hillside Retreat' },
-      amount: 99,
-      status: 'overdue',
-      dueDate: 'Dec 15, 2025',
-      issuedDate: 'Dec 1, 2025',
-      type: 'subscription',
-    },
-    {
-      id: '5',
-      number: 'INV-2025-091',
-      customer: { id: '8', name: 'Sarah Johnson' },
-      property: null,
-      amount: 647,
-      status: 'paid',
-      dueDate: 'Dec 15, 2025',
-      issuedDate: 'Dec 1, 2025',
-      type: 'subscription',
-    },
-    {
-      id: '6',
-      number: 'INV-2025-092',
-      customer: { id: '5', name: 'John Smith' },
-      property: { id: '1', name: 'Lake House' },
-      amount: 150,
-      status: 'draft',
-      dueDate: 'Jan 20, 2026',
-      issuedDate: 'Dec 28, 2025',
-      type: 'service',
-    },
-  ]
+  // Check if invoice is overdue
+  const isOverdue = (dueDate: string, status: string) => {
+    if (status === 'paid' || status === 'cancelled') return false
+    const due = new Date(dueDate)
+    return due < new Date()
+  }
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch =
-      invoice.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
-    const matchesType = typeFilter === 'all' || invoice.type === typeFilter
-    return matchesSearch && matchesStatus && matchesType
+  const invoicesList = (invoices || []).map((inv) => {
+    const customerData = inv.customer as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+    const customer = Array.isArray(customerData) ? customerData[0] : customerData
+
+    const propertyData = inv.property as { id: number; name: string } | { id: number; name: string }[] | null
+    const property = Array.isArray(propertyData) ? propertyData[0] : propertyData
+
+    const status = isOverdue(inv.due_date, inv.status) ? 'overdue' : inv.status
+
+    return {
+      id: inv.id,
+      number: inv.invoice_number,
+      customer: {
+        id: customer?.id || 0,
+        name: customer ? `${customer.first_name} ${customer.last_name}` : 'Unknown',
+      },
+      property: property ? {
+        id: property.id,
+        name: property.name,
+      } : null,
+      amount: Number(inv.total) || 0,
+      status,
+      dueDate: formatDate(inv.due_date),
+      issuedDate: formatDate(inv.issue_date),
+    }
   })
 
   const stats = {
-    pending: invoices.filter(i => i.status === 'pending').reduce((acc, i) => acc + i.amount, 0),
-    overdue: invoices.filter(i => i.status === 'overdue').reduce((acc, i) => acc + i.amount, 0),
-    paidThisMonth: invoices.filter(i => i.status === 'paid').reduce((acc, i) => acc + i.amount, 0),
-    overdueCount: invoices.filter(i => i.status === 'overdue').length,
+    pending: invoicesList.filter(i => i.status === 'pending').reduce((acc, i) => acc + i.amount, 0),
+    overdue: invoicesList.filter(i => i.status === 'overdue').reduce((acc, i) => acc + i.amount, 0),
+    paidThisMonth: invoicesList.filter(i => i.status === 'paid').reduce((acc, i) => acc + i.amount, 0),
+    overdueCount: invoicesList.filter(i => i.status === 'overdue').length,
   }
 
   const getStatusIcon = (status: string) => {
@@ -142,7 +95,7 @@ export default function InvoicesPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Invoices</h1>
           <p className="text-[#a1a1aa]">
-            Manage billing and payments
+            Manage billing and payments ({invoicesList.length} total)
           </p>
         </div>
         <Link
@@ -186,47 +139,7 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-          <input
-            type="text"
-            placeholder="Search invoices..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Types</option>
-            <option value="subscription">Subscription</option>
-            <option value="service">Service</option>
-            <option value="one-time">One-time</option>
-          </select>
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Download className="w-4 h-4" />
-            Export
-          </button>
-        </div>
-      </div>
+      <InvoiceFilters />
 
       {/* Invoices Table */}
       <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl overflow-hidden">
@@ -244,12 +157,12 @@ export default function InvoicesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#27272a]">
-              {filteredInvoices.map((invoice) => (
+              {invoicesList.map((invoice) => (
                 <tr key={invoice.id} className="hover:bg-[#171717] transition-colors">
                   <td className="px-6 py-4">
                     <div>
                       <p className="font-medium font-mono">{invoice.number}</p>
-                      <p className="text-xs text-[#71717a]">{invoice.type}</p>
+                      <p className="text-xs text-[#71717a]">{invoice.issuedDate}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -274,7 +187,7 @@ export default function InvoicesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="font-semibold">${invoice.amount}</span>
+                    <span className="font-semibold">${invoice.amount.toLocaleString()}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
@@ -304,7 +217,7 @@ export default function InvoicesPage() {
           </table>
         </div>
 
-        {filteredInvoices.length === 0 && (
+        {invoicesList.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
             <p className="text-[#71717a]">No invoices found</p>

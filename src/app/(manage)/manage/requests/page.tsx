@@ -1,9 +1,6 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   ClipboardList,
   Building2,
@@ -14,132 +11,72 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react'
+import RequestFilters from './RequestFilters'
 
-interface ServiceRequest {
-  id: string
-  title: string
-  description: string
-  property: {
-    id: string
-    name: string
+export default async function RequestsPage() {
+  const supabase = await createClient()
+
+  // Fetch service requests with related data
+  const { data: requests, error } = await supabase
+    .from('lwp_service_requests')
+    .select(`
+      id, title, description, request_type, priority, status, created_at, scheduled_date,
+      property:lwp_properties(id, name),
+      requested_by:lwp_users!requested_by_id(id, first_name, last_name),
+      assigned_to:lwp_users!assigned_to_id(id, first_name, last_name)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('Error fetching requests:', error)
   }
-  customer: {
-    id: string
-    name: string
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
   }
-  assignedTo: {
-    id: string
-    name: string
-  } | null
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  status: 'open' | 'in_progress' | 'scheduled' | 'completed' | 'cancelled'
-  category: string
-  createdAt: string
-  scheduledFor: string | null
-}
 
-export default function RequestsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const requestsList = (requests || []).map((r) => {
+    const propertyData = r.property as { id: number; name: string } | { id: number; name: string }[] | null
+    const property = Array.isArray(propertyData) ? propertyData[0] : propertyData
 
-  // Mock data
-  const requests: ServiceRequest[] = [
-    {
-      id: '1',
-      title: 'Gutter cleaning needed',
-      description: 'Gutters are clogged with leaves from the fall. Need cleaning before winter.',
-      property: { id: '1', name: 'Lake House' },
-      customer: { id: '5', name: 'John Smith' },
-      assignedTo: { id: '4', name: 'Sarah Tech' },
-      priority: 'medium',
-      status: 'scheduled',
-      category: 'Maintenance',
-      createdAt: 'Dec 18, 2025',
-      scheduledFor: 'Jan 5, 2026',
-    },
-    {
-      id: '2',
-      title: 'Basement moisture issue',
-      description: 'Technician found moisture in basement during inspection. Recommend installing dehumidifier.',
-      property: { id: '1', name: 'Lake House' },
-      customer: { id: '5', name: 'John Smith' },
-      assignedTo: null,
-      priority: 'high',
-      status: 'open',
-      category: 'Repair',
-      createdAt: 'Dec 27, 2025',
-      scheduledFor: null,
-    },
-    {
-      id: '3',
-      title: 'Dock winterization',
-      description: 'Need to prepare dock for winter - remove ladder, check cleats, inspect floats.',
-      property: { id: '3', name: 'Sunset Cove' },
-      customer: { id: '6', name: 'Jane Doe' },
-      assignedTo: { id: '3', name: 'Mike Johnson' },
-      priority: 'medium',
-      status: 'in_progress',
-      category: 'Seasonal',
-      createdAt: 'Dec 15, 2025',
-      scheduledFor: 'Dec 28, 2025',
-    },
-    {
-      id: '4',
-      title: 'Replace smoke detector batteries',
-      description: 'Low battery warning on main floor smoke detector.',
-      property: { id: '4', name: 'Hillside Retreat' },
-      customer: { id: '7', name: 'Bob Wilson' },
-      assignedTo: { id: '4', name: 'Sarah Tech' },
-      priority: 'low',
-      status: 'completed',
-      category: 'Maintenance',
-      createdAt: 'Dec 10, 2025',
-      scheduledFor: null,
-    },
-    {
-      id: '5',
-      title: 'Burst pipe emergency',
-      description: 'Pipe burst in upstairs bathroom. Water shut off. Need immediate repair.',
-      property: { id: '5', name: 'Lakewood Estate' },
-      customer: { id: '8', name: 'Sarah Johnson' },
-      assignedTo: { id: '3', name: 'Mike Johnson' },
-      priority: 'urgent',
-      status: 'in_progress',
-      category: 'Emergency',
-      createdAt: 'Dec 28, 2025',
-      scheduledFor: 'Dec 28, 2025',
-    },
-    {
-      id: '6',
-      title: 'HVAC filter replacement',
-      description: 'Regular quarterly HVAC filter change.',
-      property: { id: '6', name: 'Marina View' },
-      customer: { id: '8', name: 'Sarah Johnson' },
-      assignedTo: null,
-      priority: 'low',
-      status: 'open',
-      category: 'Maintenance',
-      createdAt: 'Dec 20, 2025',
-      scheduledFor: null,
-    },
-  ]
+    const customerData = r.requested_by as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+    const customer = Array.isArray(customerData) ? customerData[0] : customerData
 
-  const filteredRequests = requests.filter(request => {
-    const matchesSearch =
-      request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter
-    const matchesPriority = priorityFilter === 'all' || request.priority === priorityFilter
-    return matchesSearch && matchesStatus && matchesPriority
+    const assignedData = r.assigned_to as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
+    const assignedTo = Array.isArray(assignedData) ? assignedData[0] : assignedData
+
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description || '',
+      property: {
+        id: property?.id || 0,
+        name: property?.name || 'Unknown',
+      },
+      customer: {
+        id: customer?.id || 0,
+        name: customer ? `${customer.first_name} ${customer.last_name}` : 'Unknown',
+      },
+      assignedTo: assignedTo ? {
+        id: assignedTo.id,
+        name: `${assignedTo.first_name} ${assignedTo.last_name}`,
+      } : null,
+      priority: r.priority as string,
+      status: r.status as string,
+      category: r.request_type || 'General',
+      createdAt: formatDate(r.created_at),
+      scheduledFor: r.scheduled_date ? formatDate(r.scheduled_date) : null,
+    }
   })
 
   const stats = {
-    open: requests.filter(r => r.status === 'open').length,
-    inProgress: requests.filter(r => r.status === 'in_progress').length,
-    scheduled: requests.filter(r => r.status === 'scheduled').length,
-    urgent: requests.filter(r => r.priority === 'urgent' && r.status !== 'completed').length,
+    open: requestsList.filter(r => r.status === 'pending').length,
+    inProgress: requestsList.filter(r => r.status === 'in_progress').length,
+    scheduled: requestsList.filter(r => r.status === 'scheduled').length,
+    urgent: requestsList.filter(r => r.priority === 'urgent' && r.status !== 'completed').length,
   }
 
   const getPriorityColor = (priority: string) => {
@@ -149,6 +86,7 @@ export default function RequestsPage() {
       case 'high':
         return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
       case 'medium':
+      case 'normal':
         return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
       default:
         return 'bg-[#27272a] text-[#a1a1aa] border-[#27272a]'
@@ -176,13 +114,16 @@ export default function RequestsPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Service Requests</h1>
           <p className="text-[#a1a1aa]">
-            Manage customer service requests and work orders
+            Manage customer service requests and work orders ({requestsList.length} total)
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
+        <Link
+          href="/manage/requests/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+        >
           <Plus className="w-5 h-5" />
           New Request
-        </button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -217,48 +158,11 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Status</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Priority</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </div>
-      </div>
+      <RequestFilters />
 
       {/* Requests List */}
       <div className="space-y-3">
-        {filteredRequests.map((request) => (
+        {requestsList.map((request) => (
           <Link
             key={request.id}
             href={`/manage/requests/${request.id}`}
@@ -313,7 +217,7 @@ export default function RequestsPage() {
         ))}
       </div>
 
-      {filteredRequests.length === 0 && (
+      {requestsList.length === 0 && (
         <div className="text-center py-12 bg-[#0f0f0f] border border-[#27272a] rounded-xl">
           <ClipboardList className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
           <p className="text-[#71717a]">No service requests found</p>

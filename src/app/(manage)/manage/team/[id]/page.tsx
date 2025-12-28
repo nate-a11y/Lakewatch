@@ -1,13 +1,15 @@
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
   Mail,
   Phone,
   Calendar,
-  Edit,
-  Shield,
   Building2,
 } from 'lucide-react'
+import EditableNotes from '@/components/EditableNotes'
+import TeamMemberQuickActions from './TeamMemberQuickActions'
 
 export default async function TeamMemberDetailPage({
   params,
@@ -15,39 +17,51 @@ export default async function TeamMemberDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const supabase = await createClient()
 
-  // Mock data - replace with actual API call
-  const member = {
-    id,
-    firstName: 'Mike',
-    lastName: 'Johnson',
-    email: 'mike@lakewatchpros.com',
-    phone: '(314) 555-0003',
-    role: 'technician',
-    status: 'active',
-    hireDate: 'Jun 1, 2023',
-    assignedProperties: [
-      { id: '1', name: 'Lake House', address: '123 Lakefront Dr' },
-      { id: '2', name: 'Guest Cabin', address: '125 Lakefront Dr' },
-      { id: '3', name: 'Sunset Cove', address: '456 Marina Way' },
-    ],
-    stats: {
-      totalInspections: 156,
-      thisMonth: 12,
-      avgDuration: '42 min',
-      issuesFound: 8,
-    },
-    recentActivity: [
-      { id: '1', action: 'Completed inspection', property: 'Lake House', date: 'Dec 27, 2025' },
-      { id: '2', action: 'Completed inspection', property: 'Guest Cabin', date: 'Dec 20, 2025' },
-      { id: '3', action: 'Submitted service request', property: 'Lake House', date: 'Dec 18, 2025' },
-    ],
-    upcomingSchedule: [
-      { id: '1', property: 'Lake House', date: 'Jan 3, 2026', time: '9:00 AM' },
-      { id: '2', property: 'Guest Cabin', date: 'Jan 3, 2026', time: '10:30 AM' },
-      { id: '3', property: 'Sunset Cove', date: 'Jan 4, 2026', time: '9:00 AM' },
-    ],
-    notes: 'Reliable technician. Experienced with boat dock inspections.',
+  // Fetch team member data
+  const { data: member, error } = await supabase
+    .from('lwp_users')
+    .select('*')
+    .eq('id', id)
+    .in('role', ['owner', 'admin', 'technician'])
+    .single()
+
+  if (error || !member) {
+    notFound()
+  }
+
+  // Fetch inspections done by this technician
+  const { data: inspections } = await supabase
+    .from('lwp_inspections')
+    .select(`
+      id, scheduled_date, status,
+      property:lwp_properties(id, name, street)
+    `)
+    .eq('technician_id', id)
+    .order('scheduled_date', { ascending: false })
+    .limit(10)
+
+  // Separate into completed and upcoming
+  const completedInspections = (inspections || []).filter(i => i.status === 'completed')
+  const upcomingInspections = (inspections || []).filter(i => i.status === 'scheduled')
+
+  // Get properties this technician has inspected (as assigned properties)
+  const uniquePropertyIds = [...new Set((inspections || []).map(i => {
+    const prop = i.property as { id: number } | { id: number }[] | null
+    return Array.isArray(prop) ? prop[0]?.id : prop?.id
+  }).filter(Boolean))]
+
+  const { data: assignedProperties } = await supabase
+    .from('lwp_properties')
+    .select('id, name, street, city')
+    .in('id', uniquePropertyIds.length > 0 ? uniquePropertyIds : [0])
+    .limit(10)
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
   }
 
   const getRoleBadge = (role: string) => {
@@ -59,6 +73,16 @@ export default async function TeamMemberDetailPage({
       default:
         return 'bg-[#4cbb17]/10 text-[#4cbb17] border-[#4cbb17]/20'
     }
+  }
+
+  const stats = {
+    totalInspections: completedInspections.length,
+    thisMonth: completedInspections.filter(i => {
+      const date = new Date(i.scheduled_date)
+      const now = new Date()
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+    }).length,
+    assignedProperties: uniquePropertyIds.length,
   }
 
   return (
@@ -79,11 +103,11 @@ export default async function TeamMemberDetailPage({
             member.role === 'admin' ? 'bg-blue-500/10 text-blue-400' :
             'bg-[#4cbb17]/10 text-[#4cbb17]'
           }`}>
-            {member.firstName[0]}{member.lastName[0]}
+            {(member.first_name?.[0] || '?')}{(member.last_name?.[0] || '')}
           </div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold mb-1">
-              {member.firstName} {member.lastName}
+              {member.first_name} {member.last_name}
             </h1>
             <div className="flex flex-wrap items-center gap-3 text-[#a1a1aa]">
               <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -91,24 +115,22 @@ export default async function TeamMemberDetailPage({
                   ? 'bg-green-500/10 text-green-500'
                   : 'bg-[#27272a] text-[#71717a]'
               }`}>
-                {member.status}
+                {member.status || 'active'}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded border ${getRoleBadge(member.role)}`}>
                 {member.role}
               </span>
-              <span className="text-sm">Since {member.hireDate}</span>
+              <span className="text-sm">Since {formatDate(member.created_at)}</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Edit className="w-4 h-4" />
+          <Link
+            href={`/manage/team/${id}/edit`}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors"
+          >
             Edit
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
-            <Shield className="w-4 h-4" />
-            Permissions
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -130,7 +152,7 @@ export default async function TeamMemberDetailPage({
                 <Phone className="w-5 h-5 text-[#71717a]" />
                 <div>
                   <p className="text-sm text-[#71717a]">Phone</p>
-                  <p>{member.phone}</p>
+                  <p>{member.phone || 'Not provided'}</p>
                 </div>
               </div>
             </div>
@@ -140,22 +162,18 @@ export default async function TeamMemberDetailPage({
           {member.role === 'technician' && (
             <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
               <h2 className="text-lg font-semibold mb-4">Performance</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold text-[#4cbb17]">{member.stats.totalInspections}</p>
+                  <p className="text-2xl font-bold text-[#4cbb17]">{stats.totalInspections}</p>
                   <p className="text-xs text-[#71717a]">Total Inspections</p>
                 </div>
                 <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold">{member.stats.thisMonth}</p>
+                  <p className="text-2xl font-bold">{stats.thisMonth}</p>
                   <p className="text-xs text-[#71717a]">This Month</p>
                 </div>
                 <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold">{member.stats.avgDuration}</p>
-                  <p className="text-xs text-[#71717a]">Avg Duration</p>
-                </div>
-                <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold">{member.stats.issuesFound}</p>
-                  <p className="text-xs text-[#71717a]">Issues Found</p>
+                  <p className="text-2xl font-bold">{stats.assignedProperties}</p>
+                  <p className="text-xs text-[#71717a]">Properties</p>
                 </div>
               </div>
             </section>
@@ -166,12 +184,17 @@ export default async function TeamMemberDetailPage({
             <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">
-                  Assigned Properties ({member.assignedProperties.length})
+                  Properties ({assignedProperties?.length || 0})
                 </h2>
-                <button className="text-sm text-[#4cbb17] hover:underline">Manage</button>
+                <Link
+                  href="/manage/properties"
+                  className="text-sm text-[#4cbb17] hover:underline"
+                >
+                  Manage
+                </Link>
               </div>
               <div className="space-y-2">
-                {member.assignedProperties.map((property) => (
+                {assignedProperties && assignedProperties.length > 0 ? assignedProperties.map((property) => (
                   <Link
                     key={property.id}
                     href={`/manage/properties/${property.id}`}
@@ -182,10 +205,12 @@ export default async function TeamMemberDetailPage({
                     </div>
                     <div>
                       <p className="font-medium">{property.name}</p>
-                      <p className="text-sm text-[#71717a]">{property.address}</p>
+                      <p className="text-sm text-[#71717a]">{property.street}, {property.city}</p>
                     </div>
                   </Link>
-                ))}
+                )) : (
+                  <p className="text-[#71717a] text-sm py-4 text-center">No properties assigned</p>
+                )}
               </div>
             </section>
           )}
@@ -194,20 +219,26 @@ export default async function TeamMemberDetailPage({
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
             <div className="space-y-4">
-              {member.recentActivity.map((activity, index) => (
-                <div key={activity.id} className="flex gap-3">
-                  <div className="relative">
-                    <div className="w-2 h-2 bg-[#4cbb17] rounded-full mt-2" />
-                    {index < member.recentActivity.length - 1 && (
-                      <div className="absolute top-4 left-0.5 w-0.5 h-full bg-[#27272a]" />
-                    )}
+              {completedInspections.length > 0 ? completedInspections.slice(0, 5).map((inspection, index) => {
+                const prop = inspection.property as { name: string; id: number } | { name: string; id: number }[] | null
+                const propertyName = Array.isArray(prop) ? prop[0]?.name : prop?.name
+                return (
+                  <div key={inspection.id} className="flex gap-3">
+                    <div className="relative">
+                      <div className="w-2 h-2 bg-[#4cbb17] rounded-full mt-2" />
+                      {index < Math.min(completedInspections.length, 5) - 1 && (
+                        <div className="absolute top-4 left-0.5 w-0.5 h-full bg-[#27272a]" />
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <p className="text-sm font-medium">Completed inspection</p>
+                      <p className="text-xs text-[#71717a]">{propertyName} • {formatDate(inspection.scheduled_date)}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 pb-4">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-xs text-[#71717a]">{activity.property} • {activity.date}</p>
-                  </div>
-                </div>
-              ))}
+                )
+              }) : (
+                <p className="text-[#71717a] text-sm">No recent activity</p>
+              )}
             </div>
           </section>
         </div>
@@ -224,46 +255,34 @@ export default async function TeamMemberDetailPage({
                 </Link>
               </div>
               <div className="space-y-3">
-                {member.upcomingSchedule.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 p-3 bg-black/30 rounded-lg">
-                    <Calendar className="w-5 h-5 text-[#71717a]" />
-                    <div>
-                      <p className="text-sm font-medium">{item.property}</p>
-                      <p className="text-xs text-[#71717a]">{item.date} at {item.time}</p>
+                {upcomingInspections.length > 0 ? upcomingInspections.slice(0, 3).map((item) => {
+                  const prop = item.property as { name: string } | { name: string }[] | null
+                  const propertyName = Array.isArray(prop) ? prop[0]?.name : prop?.name
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 p-3 bg-black/30 rounded-lg">
+                      <Calendar className="w-5 h-5 text-[#71717a]" />
+                      <div>
+                        <p className="text-sm font-medium">{propertyName}</p>
+                        <p className="text-xs text-[#71717a]">{formatDate(item.scheduled_date)}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                }) : (
+                  <p className="text-[#71717a] text-sm py-2">No upcoming inspections</p>
+                )}
               </div>
             </section>
           )}
 
           {/* Notes */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Notes</h2>
-              <button className="text-sm text-[#4cbb17] hover:underline">Edit</button>
-            </div>
-            <p className="text-sm text-[#a1a1aa]">{member.notes}</p>
-          </section>
+          <EditableNotes
+            initialNotes=""
+            title="Notes"
+            placeholder="Add team member notes..."
+          />
 
           {/* Quick Actions */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                View all inspections
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                Assign properties
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#27272a] rounded-lg transition-colors">
-                Reset password
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
-                Deactivate account
-              </button>
-            </div>
-          </section>
+          <TeamMemberQuickActions memberId={id} memberRole={member.role} />
         </div>
       </div>
     </div>

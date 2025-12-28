@@ -1,91 +1,67 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   CheckSquare,
   ChevronRight,
-  Copy,
   Edit,
 } from 'lucide-react'
+import ChecklistFilters, { DuplicateButton } from './ChecklistFilters'
 
-interface Checklist {
-  id: string
-  name: string
-  description: string
-  itemCount: number
-  plan: 'Premium' | 'Standard' | 'Basic' | 'Custom'
-  usedBy: number
-  lastUpdated: string
-}
+export default async function ChecklistsPage() {
+  const supabase = await createClient()
 
-export default function ChecklistsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
+  // Fetch checklists with item count
+  const { data: checklists, error } = await supabase
+    .from('lwp_checklists')
+    .select(`
+      id, name, description, property_type, is_default, created_at, updated_at,
+      items:lwp_checklists_items(count)
+    `)
+    .order('name')
 
-  // Mock data
-  const checklists: Checklist[] = [
-    {
-      id: '1',
-      name: 'Premium Weekly Inspection',
-      description: 'Comprehensive weekly inspection for premium plan properties',
-      itemCount: 24,
-      plan: 'Premium',
-      usedBy: 5,
-      lastUpdated: 'Dec 15, 2025',
-    },
-    {
-      id: '2',
-      name: 'Standard Bi-Weekly Inspection',
-      description: 'Standard inspection checklist for bi-weekly visits',
-      itemCount: 18,
-      plan: 'Standard',
-      usedBy: 8,
-      lastUpdated: 'Dec 10, 2025',
-    },
-    {
-      id: '3',
-      name: 'Basic Monthly Inspection',
-      description: 'Essential checks for monthly inspection visits',
-      itemCount: 12,
-      plan: 'Basic',
-      usedBy: 4,
-      lastUpdated: 'Dec 5, 2025',
-    },
-    {
-      id: '4',
-      name: 'Winterization Checklist',
-      description: 'Seasonal checklist for preparing properties for winter',
-      itemCount: 15,
-      plan: 'Custom',
-      usedBy: 12,
-      lastUpdated: 'Nov 1, 2025',
-    },
-    {
-      id: '5',
-      name: 'Storm Damage Assessment',
-      description: 'Emergency checklist for post-storm property assessment',
-      itemCount: 10,
-      plan: 'Custom',
-      usedBy: 0,
-      lastUpdated: 'Oct 20, 2025',
-    },
-  ]
+  if (error) {
+    console.error('Error fetching checklists:', error)
+  }
 
-  const filteredChecklists = checklists.filter(checklist =>
-    checklist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    checklist.description.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
+  }
+
+  const checklistsList = (checklists || []).map((checklist) => {
+    const itemsData = checklist.items as { count: number }[] | null
+    const itemCount = itemsData?.[0]?.count || 0
+
+    // Determine plan type based on property_type or is_default
+    let plan = 'Custom'
+    if (checklist.is_default) {
+      plan = 'Default'
+    } else if (checklist.property_type) {
+      plan = checklist.property_type.charAt(0).toUpperCase() + checklist.property_type.slice(1)
+    }
+
+    return {
+      id: checklist.id,
+      name: checklist.name,
+      description: checklist.description || 'No description',
+      itemCount,
+      plan,
+      lastUpdated: formatDate(checklist.updated_at || checklist.created_at),
+    }
+  })
 
   const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case 'Premium':
+    switch (plan.toLowerCase()) {
+      case 'premium':
         return 'bg-purple-500/10 text-purple-400'
-      case 'Standard':
+      case 'standard':
         return 'bg-blue-500/10 text-blue-400'
-      case 'Basic':
+      case 'basic':
         return 'bg-[#27272a] text-[#a1a1aa]'
+      case 'default':
+        return 'bg-green-500/10 text-green-400'
       default:
         return 'bg-[#4cbb17]/10 text-[#4cbb17]'
     }
@@ -97,7 +73,7 @@ export default function ChecklistsPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Checklists</h1>
           <p className="text-[#a1a1aa]">
-            Manage inspection checklists and templates
+            Manage inspection checklists and templates ({checklistsList.length} total)
           </p>
         </div>
         <Link
@@ -109,21 +85,11 @@ export default function ChecklistsPage() {
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-        <input
-          type="text"
-          placeholder="Search checklists..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-        />
-      </div>
+      <ChecklistFilters />
 
       {/* Checklists Grid */}
       <div className="space-y-4">
-        {filteredChecklists.map((checklist) => (
+        {checklistsList.map((checklist) => (
           <div
             key={checklist.id}
             className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-5 hover:border-[#4cbb17]/50 transition-colors"
@@ -143,15 +109,12 @@ export default function ChecklistsPage() {
                   <p className="text-sm text-[#71717a] mb-3">{checklist.description}</p>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-[#71717a]">
                     <span>{checklist.itemCount} items</span>
-                    <span>Used by {checklist.usedBy} properties</span>
                     <span>Updated {checklist.lastUpdated}</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#27272a] rounded-lg transition-colors" title="Duplicate">
-                  <Copy className="w-4 h-4 text-[#71717a]" />
-                </button>
+                <DuplicateButton name={checklist.name} />
                 <Link
                   href={`/manage/checklists/${checklist.id}`}
                   className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
@@ -171,7 +134,7 @@ export default function ChecklistsPage() {
         ))}
       </div>
 
-      {filteredChecklists.length === 0 && (
+      {checklistsList.length === 0 && (
         <div className="text-center py-12 bg-[#0f0f0f] border border-[#27272a] rounded-xl">
           <CheckSquare className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
           <p className="text-[#71717a]">No checklists found</p>
@@ -182,21 +145,30 @@ export default function ChecklistsPage() {
       <div className="mt-12">
         <h2 className="text-lg font-semibold mb-4">Quick Start Templates</h2>
         <div className="grid md:grid-cols-3 gap-4">
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          <Link
+            href="/manage/checklists/new?template=basic-home"
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Basic Home Inspection</p>
             <p className="text-sm text-[#71717a]">10 essential items for monthly checks</p>
-          </button>
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          </Link>
+          <Link
+            href="/manage/checklists/new?template=lake-property"
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Lake Property Special</p>
             <p className="text-sm text-[#71717a]">Includes dock and waterfront checks</p>
-          </button>
-          <button className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors text-left">
+          </Link>
+          <Link
+            href="/manage/checklists/new?template=seasonal"
+            className="p-4 bg-[#0f0f0f] border border-dashed border-[#27272a] rounded-xl hover:border-[#4cbb17] transition-colors"
+          >
             <CheckSquare className="w-8 h-8 text-[#4cbb17] mb-3" />
             <p className="font-medium mb-1">Seasonal Changeover</p>
             <p className="text-sm text-[#71717a]">Spring/Fall preparation checklist</p>
-          </button>
+          </Link>
         </div>
       </div>
     </div>

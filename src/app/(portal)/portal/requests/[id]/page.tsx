@@ -6,6 +6,7 @@ import {
   Clock,
   MessageSquare,
 } from 'lucide-react'
+import CancelRequestButton from '@/components/buttons/CancelRequestButton'
 
 export default async function ServiceRequestDetailPage({
   params,
@@ -167,9 +168,7 @@ export default async function ServiceRequestDetailPage({
               <MessageSquare className="w-5 h-5" />
               Message Team
             </Link>
-            <button className="px-4 py-3 border border-[#27272a] rounded-xl hover:bg-[#27272a] transition-colors">
-              Cancel Request
-            </button>
+            <CancelRequestButton requestId={id} />
           </div>
         </div>
 
