@@ -5,6 +5,7 @@ import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+// Website collections
 import {
   Services,
   Testimonials,
@@ -15,6 +16,21 @@ import {
   Media,
   Users,
 } from './payload/collections'
+
+// Portal collections
+import {
+  Properties,
+  ServicePlans,
+  Checklists,
+  Inspections,
+  ServiceRequests,
+  OccupancyCalendar,
+  Invoices,
+  Conversations,
+  Messages,
+  Documents,
+  Notifications,
+} from './payload/collections/portal'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,6 +43,7 @@ export default buildConfig({
     },
   },
   collections: [
+    // Website
     Services,
     Testimonials,
     Team,
@@ -35,6 +52,18 @@ export default buildConfig({
     Leads,
     Media,
     Users,
+    // Portal
+    Properties,
+    ServicePlans,
+    Checklists,
+    Inspections,
+    ServiceRequests,
+    OccupancyCalendar,
+    Invoices,
+    Conversations,
+    Messages,
+    Documents,
+    Notifications,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'lake-watch-pros-secret-change-me',
