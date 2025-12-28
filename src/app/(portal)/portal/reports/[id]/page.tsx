@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -9,12 +11,12 @@ import {
   User,
   Thermometer,
   Cloud,
-  Download,
   Camera,
   Check,
   X,
   AlertCircle,
 } from 'lucide-react'
+import DownloadPDFButton from './DownloadPDFButton'
 
 export default async function ReportDetailPage({
   params,
@@ -22,84 +24,93 @@ export default async function ReportDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  // Mock data - replace with actual API call
-  const report = {
-    id: id,
-    property: {
-      id: '1',
-      name: 'Lake House',
-      address: '123 Lakefront Dr, Lake Ozark, MO 65049',
-    },
-    date: 'December 20, 2025',
-    status: 'all_clear',
-    technician: 'Mike Thompson',
-    checkIn: '9:15 AM',
-    checkOut: '10:32 AM',
-    weather: {
-      temperature: 42,
-      conditions: 'Partly Cloudy',
-    },
-    summary: 'Completed standard bi-weekly inspection. All systems are functioning properly. No issues found during this visit. Property is well-maintained and secure.',
-    checklist: [
-      {
-        category: 'Exterior',
-        items: [
-          { item: 'Check exterior doors and locks', response: 'pass', notes: '' },
-          { item: 'Inspect windows for damage', response: 'pass', notes: '' },
-          { item: 'Check for signs of pests or animals', response: 'pass', notes: '' },
-          { item: 'Inspect roof visible from ground', response: 'pass', notes: '' },
-          { item: 'Check gutters and downspouts', response: 'pass', notes: '' },
-          { item: 'Inspect deck/patio condition', response: 'pass', notes: '' },
-        ],
-      },
-      {
-        category: 'HVAC',
-        items: [
-          { item: 'Check thermostat settings', response: 'pass', notes: 'Set to 55°F' },
-          { item: 'Verify HVAC is operating', response: 'pass', notes: '' },
-          { item: 'Check air filters', response: 'pass', notes: 'Filters clean' },
-          { item: 'Listen for unusual sounds', response: 'pass', notes: '' },
-        ],
-      },
-      {
-        category: 'Plumbing',
-        items: [
-          { item: 'Check under all sinks for leaks', response: 'pass', notes: '' },
-          { item: 'Flush toilets', response: 'pass', notes: '' },
-          { item: 'Run water in all faucets', response: 'pass', notes: '' },
-          { item: 'Check water heater', response: 'pass', notes: 'Operating normally' },
-          { item: 'Inspect washing machine connections', response: 'pass', notes: '' },
-        ],
-      },
-      {
-        category: 'Electrical',
-        items: [
-          { item: 'Test smoke detectors', response: 'pass', notes: '' },
-          { item: 'Test CO detectors', response: 'pass', notes: '' },
-          { item: 'Check GFI outlets', response: 'pass', notes: '' },
-          { item: 'Verify lights are working', response: 'pass', notes: '' },
-        ],
-      },
-      {
-        category: 'Security',
-        items: [
-          { item: 'Verify alarm system status', response: 'pass', notes: 'Armed and functioning' },
-          { item: 'Check all door locks', response: 'pass', notes: '' },
-          { item: 'Inspect garage door', response: 'pass', notes: '' },
-        ],
-      },
-    ],
-    issues: [],
-    photos: [
-      { id: '1', caption: 'Front exterior', url: '/placeholder-house.jpg' },
-      { id: '2', caption: 'Back deck', url: '/placeholder-deck.jpg' },
-      { id: '3', caption: 'Thermostat reading', url: '/placeholder-thermostat.jpg' },
-    ],
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    notFound()
   }
 
-  const totalItems = report.checklist.reduce((acc, cat) => acc + cat.items.length, 0)
+  // Get user data
+  const { data: userData } = await supabase
+    .from('lwp_users')
+    .select('id, role')
+    .eq('supabase_id', user.id)
+    .single()
+
+  // Get inspection with all details
+  const { data: inspection } = await supabase
+    .from('lwp_inspections')
+    .select(`
+      *,
+      property:lwp_properties!property_id(
+        id, name, street, city, state, zip,
+        owner:lwp_users!owner_id(id, first_name, last_name)
+      ),
+      technician:lwp_users!technician_id(id, first_name, last_name)
+    `)
+    .eq('id', parseInt(id))
+    .single()
+
+  if (!inspection) {
+    notFound()
+  }
+
+  // Check access
+  const property = Array.isArray(inspection.property)
+    ? inspection.property[0]
+    : inspection.property
+  const owner = property?.owner
+  const ownerData = Array.isArray(owner) ? owner[0] : owner
+
+  // Allow access for admins or the property owner
+  const isAdmin = userData?.role && ['admin', 'owner', 'staff'].includes(userData.role)
+  if (!isAdmin && ownerData?.id !== userData?.id) {
+    notFound()
+  }
+
+  const technician = Array.isArray(inspection.technician)
+    ? inspection.technician[0]
+    : inspection.technician
+
+  // Build report from real data
+  const report = {
+    id,
+    property: {
+      id: property?.id || '',
+      name: property?.name || 'Property',
+      address: `${property?.street || ''}, ${property?.city || ''}, ${property?.state || 'MO'} ${property?.zip || ''}`,
+    },
+    date: new Date(inspection.scheduled_date).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+    status: inspection.overall_status === 'good' ? 'all_clear' : 'issues_found',
+    technician: technician ? `${technician.first_name} ${technician.last_name}` : 'N/A',
+    checkIn: inspection.check_in_time
+      ? new Date(inspection.check_in_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : 'N/A',
+    checkOut: inspection.check_out_time
+      ? new Date(inspection.check_out_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : 'N/A',
+    weather: inspection.weather || { temperature: null, conditions: null },
+    summary: inspection.summary || 'No summary provided.',
+    checklist: (() => {
+      const responses = inspection.checklist_responses || []
+      const categories = [...new Set(responses.map((r: { category?: string }) => r.category || 'General'))]
+      return categories.map(category => ({
+        category,
+        items: responses.filter((r: { category?: string }) => (r.category || 'General') === category),
+      }))
+    })(),
+    issues: inspection.issues_found || [],
+    photos: inspection.photos || [],
+  }
+
+  const totalItems = report.checklist.reduce((acc: number, cat: { items: unknown[] }) => acc + cat.items.length, 0)
   const passedItems = report.checklist.reduce(
-    (acc, cat) => acc + cat.items.filter(i => i.response === 'pass').length,
+    (acc: number, cat: { items: Array<{ response?: string }> }) => acc + cat.items.filter(i => i.response === 'pass').length,
     0
   )
 
@@ -133,10 +144,7 @@ export default async function ReportDetailPage({
               {report.property.address}
             </p>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
-            <Download className="w-4 h-4" />
-            Download PDF
-          </button>
+          <DownloadPDFButton inspectionId={id} />
         </div>
 
         {/* Meta info */}
@@ -162,20 +170,24 @@ export default async function ReportDetailPage({
               {report.technician}
             </p>
           </div>
-          <div>
-            <p className="text-[#71717a] mb-1">Weather</p>
-            <p className="flex items-center gap-2">
-              <Thermometer className="w-4 h-4 text-[#4cbb17]" />
-              {report.weather.temperature}°F
-            </p>
-          </div>
-          <div>
-            <p className="text-[#71717a] mb-1">Conditions</p>
-            <p className="flex items-center gap-2">
-              <Cloud className="w-4 h-4 text-[#4cbb17]" />
-              {report.weather.conditions}
-            </p>
-          </div>
+          {report.weather?.temperature && (
+            <div>
+              <p className="text-[#71717a] mb-1">Weather</p>
+              <p className="flex items-center gap-2">
+                <Thermometer className="w-4 h-4 text-[#4cbb17]" />
+                {report.weather.temperature}°F
+              </p>
+            </div>
+          )}
+          {report.weather?.conditions && (
+            <div>
+              <p className="text-[#71717a] mb-1">Conditions</p>
+              <p className="flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-[#4cbb17]" />
+                {report.weather.conditions}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -210,55 +222,80 @@ export default async function ReportDetailPage({
             <AlertTriangle className="w-5 h-5 text-yellow-500" />
             Issues Found
           </h2>
-          {/* Issues list would go here */}
+          <div className="space-y-4">
+            {report.issues.map((issue: { severity?: string; description?: string; action_taken?: string }, idx: number) => (
+              <div key={idx} className="p-4 bg-black/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    issue.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
+                    issue.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                    issue.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {issue.severity || 'low'}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-white">{issue.description}</p>
+                    {issue.action_taken && (
+                      <p className="text-sm text-[#a1a1aa] mt-2">
+                        <strong>Action taken:</strong> {issue.action_taken}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
       {/* Checklist */}
-      <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Inspection Checklist</h2>
-        <div className="space-y-6">
-          {report.checklist.map((category) => (
-            <div key={category.category}>
-              <h3 className="text-[#4cbb17] font-medium mb-3">{category.category}</h3>
-              <div className="space-y-2">
-                {category.items.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 p-3 bg-[#0a0a0a] rounded-lg"
-                  >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      item.response === 'pass'
-                        ? 'bg-green-500/20 text-green-500'
-                        : item.response === 'fail'
-                        ? 'bg-red-500/20 text-red-500'
-                        : item.response === 'needs_attention'
-                        ? 'bg-yellow-500/20 text-yellow-500'
-                        : 'bg-[#27272a] text-[#71717a]'
-                    }`}>
-                      {item.response === 'pass' ? (
-                        <Check className="w-4 h-4" />
-                      ) : item.response === 'fail' ? (
-                        <X className="w-4 h-4" />
-                      ) : item.response === 'needs_attention' ? (
-                        <AlertCircle className="w-4 h-4" />
-                      ) : (
-                        <span className="text-xs">N/A</span>
-                      )}
+      {report.checklist.length > 0 && (
+        <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Inspection Checklist</h2>
+          <div className="space-y-6">
+            {report.checklist.map((category: { category: string; items: Array<{ item?: string; response?: string; notes?: string }> }) => (
+              <div key={category.category}>
+                <h3 className="text-[#4cbb17] font-medium mb-3">{category.category}</h3>
+                <div className="space-y-2">
+                  {category.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 p-3 bg-[#0a0a0a] rounded-lg"
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        item.response === 'pass'
+                          ? 'bg-green-500/20 text-green-500'
+                          : item.response === 'fail'
+                          ? 'bg-red-500/20 text-red-500'
+                          : item.response === 'needs_attention'
+                          ? 'bg-yellow-500/20 text-yellow-500'
+                          : 'bg-[#27272a] text-[#71717a]'
+                      }`}>
+                        {item.response === 'pass' ? (
+                          <Check className="w-4 h-4" />
+                        ) : item.response === 'fail' ? (
+                          <X className="w-4 h-4" />
+                        ) : item.response === 'needs_attention' ? (
+                          <AlertCircle className="w-4 h-4" />
+                        ) : (
+                          <span className="text-xs">N/A</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm">{item.item}</p>
+                        {item.notes && (
+                          <p className="text-xs text-[#71717a] mt-1">{item.notes}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm">{item.item}</p>
-                      {item.notes && (
-                        <p className="text-xs text-[#71717a] mt-1">{item.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Photos */}
       {report.photos.length > 0 && (
@@ -268,14 +305,20 @@ export default async function ReportDetailPage({
             Photos ({report.photos.length})
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {report.photos.map((photo) => (
-              <div key={photo.id} className="aspect-video bg-[#27272a] rounded-lg overflow-hidden relative group cursor-pointer">
-                <div className="absolute inset-0 flex items-center justify-center text-[#71717a]">
-                  <Camera className="w-8 h-8" />
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                  <p className="text-xs text-white">{photo.caption}</p>
-                </div>
+            {report.photos.map((photo: { id?: string; caption?: string; url?: string }, idx: number) => (
+              <div key={photo.id || idx} className="aspect-video bg-[#27272a] rounded-lg overflow-hidden relative group cursor-pointer">
+                {photo.url ? (
+                  <img src={photo.url} alt={photo.caption || 'Inspection photo'} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-[#71717a]">
+                    <Camera className="w-8 h-8" />
+                  </div>
+                )}
+                {photo.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                    <p className="text-xs text-white">{photo.caption}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

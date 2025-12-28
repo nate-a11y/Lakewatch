@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { createBrowserClient } from '@supabase/ssr'
 import {
   ArrowLeft,
   Send,
@@ -43,9 +44,79 @@ export default function ConversationView({
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Subscribe to real-time message updates
+  useEffect(() => {
+    const channel = supabase
+      .channel(`conversation-${conversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'lwp_messages',
+          filter: `conversation_id=eq.${conversation.id}`,
+        },
+        async (payload) => {
+          // Only process if message is not from current user (we already added it optimistically)
+          if (payload.new.sender_id === currentUserId) {
+            return
+          }
+
+          // Fetch the full message with sender info
+          const { data: newMsg } = await supabase
+            .from('lwp_messages')
+            .select(`
+              id, content, created_at, sender_id,
+              sender:lwp_users!sender_id(id, first_name, last_name, role)
+            `)
+            .eq('id', payload.new.id)
+            .single()
+
+          if (newMsg) {
+            const senderData = newMsg.sender as unknown
+            const sender = Array.isArray(senderData) ? senderData[0] : senderData
+            const transformedMessage: MessageData = {
+              id: newMsg.id,
+              senderId: newMsg.sender_id,
+              senderName: sender ? `${sender.first_name} ${sender.last_name}` : 'Unknown',
+              senderRole: sender?.role || 'admin',
+              content: newMsg.content?.replace(/<[^>]*>/g, '') || '',
+              timestamp: new Date(newMsg.created_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              }),
+              isOwn: false,
+            }
+
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === transformedMessage.id)) {
+                return prev
+              }
+              return [...prev, transformedMessage]
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [conversation.id, currentUserId, supabase])
 
   const handleSend = async () => {
     if (!newMessage.trim() || isSending) return
@@ -129,6 +200,10 @@ export default function ConversationView({
               </div>
             )}
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span className="text-xs text-[#71717a]">Live</span>
         </div>
       </div>
 
