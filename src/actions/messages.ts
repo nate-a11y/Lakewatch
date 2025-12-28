@@ -155,6 +155,70 @@ export async function getCustomerConversation(conversationId: number) {
   }
 }
 
+// Send message (simplified for client component)
+export async function sendMessage(data: {
+  conversationId: number
+  content: string
+}) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated', success: false, data: null }
+  }
+
+  const { data: userData } = await supabase
+    .from('lwp_users')
+    .select('id')
+    .eq('supabase_id', user.id)
+    .single()
+
+  if (!userData) {
+    return { error: 'User not found', success: false, data: null }
+  }
+
+  // Verify conversation belongs to customer
+  const { data: conversation } = await supabase
+    .from('lwp_conversations')
+    .select('id, customer_id')
+    .eq('id', data.conversationId)
+    .single()
+
+  if (!conversation || conversation.customer_id !== userData.id) {
+    return { error: 'Conversation not found', success: false, data: null }
+  }
+
+  // Insert message
+  const { data: message, error: msgError } = await supabase
+    .from('lwp_messages')
+    .insert({
+      conversation_id: data.conversationId,
+      sender_id: userData.id,
+      content: data.content,
+      is_internal: false,
+    })
+    .select()
+    .single()
+
+  if (msgError) {
+    return { error: msgError.message, success: false, data: null }
+  }
+
+  // Update conversation
+  await supabase
+    .from('lwp_conversations')
+    .update({
+      last_message_at: new Date().toISOString(),
+      unread_by_staff: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', data.conversationId)
+
+  revalidatePath(`/portal/messages/${data.conversationId}`)
+  revalidatePath('/portal/messages')
+  return { error: null, success: true, data: message }
+}
+
 // Send message (customer)
 export async function sendCustomerMessage(conversationId: number, content: string) {
   const supabase = await createClient()

@@ -417,6 +417,125 @@ export async function getUpcomingArrivals(days = 7) {
   return { error: null, data }
 }
 
+// Add occupancy event (simplified for client component)
+export async function addOccupancyEvent(data: {
+  propertyId: number
+  eventType: 'owner_visit' | 'guest_visit' | 'rental' | 'contractor'
+  startDate: string
+  endDate: string
+  guestName?: string
+  guestPhone?: string
+  guestEmail?: string
+  notes?: string
+  preArrivalRequested?: boolean
+  postDepartureRequested?: boolean
+}) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated', success: false, data: null }
+  }
+
+  const { data: userData } = await supabase
+    .from('lwp_users')
+    .select('id')
+    .eq('supabase_id', user.id)
+    .single()
+
+  if (!userData) {
+    return { error: 'User not found', success: false, data: null }
+  }
+
+  // Verify property ownership
+  const { data: property } = await supabase
+    .from('lwp_properties')
+    .select('id, owner_id')
+    .eq('id', data.propertyId)
+    .single()
+
+  if (!property || property.owner_id !== userData.id) {
+    return { error: 'Property not found', success: false, data: null }
+  }
+
+  const eventData = {
+    property_id: data.propertyId,
+    event_type: data.eventType,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    guest_name: data.guestName || null,
+    guest_phone: data.guestPhone || null,
+    guest_email: data.guestEmail || null,
+    notes: data.notes || null,
+    pre_arrival_requested: data.preArrivalRequested || false,
+    post_departure_requested: data.postDepartureRequested || false,
+    created_by_id: userData.id,
+  }
+
+  const { data: result, error } = await supabase
+    .from('lwp_occupancy_calendar')
+    .insert(eventData)
+    .select()
+    .single()
+
+  if (error) {
+    return { error: error.message, success: false, data: null }
+  }
+
+  // If pre-arrival is requested, create a service request
+  if (data.preArrivalRequested) {
+    const { data: preArrivalRequest } = await supabase
+      .from('lwp_service_requests')
+      .insert({
+        property_id: data.propertyId,
+        requested_by_id: userData.id,
+        request_type: 'pre_arrival',
+        title: `Pre-Arrival Preparation for ${data.startDate}`,
+        description: data.notes || null,
+        priority: 'normal',
+        preferred_date: data.startDate,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (preArrivalRequest) {
+      await supabase
+        .from('lwp_occupancy_calendar')
+        .update({ pre_arrival_request_id: preArrivalRequest.id })
+        .eq('id', result.id)
+    }
+  }
+
+  // If post-departure is requested, create a service request
+  if (data.postDepartureRequested) {
+    const { data: postDepartureRequest } = await supabase
+      .from('lwp_service_requests')
+      .insert({
+        property_id: data.propertyId,
+        requested_by_id: userData.id,
+        request_type: 'post_departure',
+        title: `Post-Departure Closing for ${data.endDate}`,
+        description: data.notes || null,
+        priority: 'normal',
+        preferred_date: data.endDate,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (postDepartureRequest) {
+      await supabase
+        .from('lwp_occupancy_calendar')
+        .update({ post_departure_request_id: postDepartureRequest.id })
+        .eq('id', result.id)
+    }
+  }
+
+  revalidatePath('/portal/calendar')
+  return { error: null, success: true, data: result }
+}
+
 // Get upcoming departures (for admin dashboard)
 export async function getUpcomingDepartures(days = 7) {
   const supabase = await createClient()
