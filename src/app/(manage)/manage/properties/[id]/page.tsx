@@ -12,7 +12,7 @@ import {
   Droplets,
   Camera,
 } from 'lucide-react'
-import ActionButton from '@/components/buttons/ActionButton'
+import EditableNotes from '@/components/EditableNotes'
 
 export default async function PropertyDetailPage({
   params,
@@ -310,13 +310,11 @@ export default async function PropertyDetailPage({
           </section>
 
           {/* Property Notes */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Notes</h2>
-              <ActionButton label="Edit" message="Edit notes coming soon" />
-            </div>
-            <p className="text-sm text-[#a1a1aa]">{property.propertyNotes}</p>
-          </section>
+          <EditableNotes
+            initialNotes={property.propertyNotes}
+            title="Notes"
+            placeholder="Add property notes..."
+          />
 
           {/* Recent Photos */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">

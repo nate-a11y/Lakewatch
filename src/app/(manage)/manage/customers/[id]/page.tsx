@@ -9,6 +9,7 @@ import {
   Edit,
 } from 'lucide-react'
 import ActionButton from '@/components/buttons/ActionButton'
+import EditableNotes from '@/components/EditableNotes'
 
 export default async function CustomerDetailPage({
   params,
@@ -211,13 +212,11 @@ export default async function CustomerDetailPage({
           </section>
 
           {/* Notes */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Notes</h2>
-              <ActionButton label="Edit" message="Edit notes coming soon" />
-            </div>
-            <p className="text-sm text-[#a1a1aa]">{customer.notes}</p>
-          </section>
+          <EditableNotes
+            initialNotes={customer.notes}
+            title="Notes"
+            placeholder="Add customer notes..."
+          />
 
           {/* Recent Activity */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">

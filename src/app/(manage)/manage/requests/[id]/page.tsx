@@ -12,6 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import ActionButton from '@/components/buttons/ActionButton'
+import EditableNotes from '@/components/EditableNotes'
 
 export default async function RequestDetailPage({
   params,
@@ -170,13 +171,11 @@ export default async function RequestDetailPage({
           </section>
 
           {/* Notes */}
-          <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Notes</h2>
-              <ActionButton label="Add note" message="Add note coming soon" />
-            </div>
-            <p className="text-[#a1a1aa]">{request.notes}</p>
-          </section>
+          <EditableNotes
+            initialNotes={request.notes}
+            title="Notes"
+            placeholder="Add request notes..."
+          />
 
           {/* Activity History */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
