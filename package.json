@@ -1,0 +1,38 @@
+{
+  "name": "lake-watch-pros",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "generate:types": "payload generate:types",
+    "payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "^3.69.0",
+    "@payloadcms/next": "^3.69.0",
+    "@payloadcms/richtext-lexical": "^3.69.0",
+    "@payloadcms/storage-vercel-blob": "^3.69.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.562.0",
+    "next": "^15.5.9",
+    "payload": "^3.69.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "sass": "^1.97.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
