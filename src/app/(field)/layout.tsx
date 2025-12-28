@@ -26,8 +26,9 @@ export default async function FieldLayout({
 
   const role = dbUser?.role || user.user_metadata?.role || 'customer'
 
-  // Only allow technicians, admins, and owners access to field portal
-  if (!['technician', 'admin', 'owner'].includes(role)) {
+  // Only redirect away if we have a confirmed role from the database
+  // This prevents redirect loops when the database query fails
+  if (dbUser?.role && !['technician', 'admin', 'owner'].includes(role)) {
     redirect('/portal')
   }
 

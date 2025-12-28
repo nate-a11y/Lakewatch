@@ -26,8 +26,9 @@ export default async function ManageLayout({
 
   const role = dbUser?.role || user.user_metadata?.role || 'customer'
 
-  // Only allow admin/owner access to manage portal
-  if (!['admin', 'owner'].includes(role)) {
+  // Only redirect away if we have a confirmed role from the database
+  // This prevents redirect loops when the database query fails
+  if (dbUser?.role && !['admin', 'owner'].includes(role)) {
     if (role === 'technician') {
       redirect('/field')
     }

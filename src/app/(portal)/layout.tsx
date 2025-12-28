@@ -26,12 +26,15 @@ export default async function PortalLayout({
 
   const role = dbUser?.role || user.user_metadata?.role || 'customer'
 
-  // Redirect owners and admins to /manage, technicians to /field
-  if (role === 'owner' || role === 'admin') {
-    redirect('/manage')
-  }
-  if (role === 'technician') {
-    redirect('/field')
+  // Only redirect if we have a confirmed role from the database
+  // This prevents redirect loops when the database query fails
+  if (dbUser?.role) {
+    if (role === 'owner' || role === 'admin') {
+      redirect('/manage')
+    }
+    if (role === 'technician') {
+      redirect('/field')
+    }
   }
 
   const userData = {
