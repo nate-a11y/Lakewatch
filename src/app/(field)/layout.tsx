@@ -17,22 +17,12 @@ export default async function FieldLayout({
     redirect('/login?redirect=/field')
   }
 
-  // Fetch user role from database - try supabase_id first, then email as fallback
-  let { data: dbUser } = await supabase
+  // Fetch user role from database using email (most reliable)
+  const { data: dbUser } = await supabase
     .from('lwp_users')
     .select('role, first_name, last_name')
-    .eq('supabase_id', user.id)
+    .eq('email', user.email)
     .single()
-
-  // Fallback to email lookup if supabase_id not found
-  if (!dbUser && user.email) {
-    const { data: emailUser } = await supabase
-      .from('lwp_users')
-      .select('role, first_name, last_name')
-      .eq('email', user.email)
-      .single()
-    dbUser = emailUser
-  }
 
   const role = dbUser?.role || user.user_metadata?.role || 'customer'
 

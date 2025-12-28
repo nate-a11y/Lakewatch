@@ -7,13 +7,6 @@ const protectedRoutes = ['/portal', '/manage', '/field']
 // Routes only for unauthenticated users
 const authRoutes = ['/login', '/signup', '/reset-password']
 
-// Role-based route access
-const roleRoutes: Record<string, string[]> = {
-  '/portal': ['customer', 'admin', 'owner'],
-  '/manage': ['admin', 'owner'],
-  '/field': ['technician', 'admin', 'owner'],
-}
-
 export async function middleware(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request)
   const { pathname } = request.nextUrl
@@ -34,17 +27,10 @@ export async function middleware(request: NextRequest) {
   )
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages to portal
+  // (The portal layout will redirect to the correct dashboard based on DB role)
   if (isAuthRoute && user) {
-    // Redirect based on role
-    const role = user.user_metadata?.role || 'customer'
-    let redirectPath = '/portal'
-    if (role === 'admin' || role === 'owner') {
-      redirectPath = '/manage'
-    } else if (role === 'technician') {
-      redirectPath = '/field'
-    }
-    return NextResponse.redirect(new URL(redirectPath, request.url))
+    return NextResponse.redirect(new URL('/portal', request.url))
   }
 
   // Redirect unauthenticated users to login
@@ -54,26 +40,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Check role-based access
-  if (isProtectedRoute && user) {
-    const role = user.user_metadata?.role || 'customer'
-
-    for (const [routePrefix, allowedRoles] of Object.entries(roleRoutes)) {
-      if (pathname.startsWith(routePrefix)) {
-        if (!allowedRoles.includes(role)) {
-          // Redirect to appropriate dashboard based on role
-          let redirectPath = '/portal'
-          if (role === 'admin' || role === 'owner') {
-            redirectPath = '/manage'
-          } else if (role === 'technician') {
-            redirectPath = '/field'
-          }
-          return NextResponse.redirect(new URL(redirectPath, request.url))
-        }
-        break
-      }
-    }
-  }
+  // Role-based access is handled by individual layouts which can query the database
+  // Middleware cannot efficiently query the database for user roles
 
   return supabaseResponse
 }
