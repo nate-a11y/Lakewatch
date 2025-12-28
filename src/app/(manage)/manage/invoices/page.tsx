@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Download,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Invoice {
   id: string
@@ -221,7 +222,10 @@ export default function InvoicesPage() {
             <option value="service">Service</option>
             <option value="one-time">One-time</option>
           </select>
-          <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors">
+          <button
+            onClick={() => toast.success('Exporting invoices...')}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] transition-colors"
+          >
             <Download className="w-4 h-4" />
             Export
           </button>
