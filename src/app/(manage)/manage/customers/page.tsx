@@ -1,48 +1,55 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   Building2,
   Mail,
   Phone,
   ChevronRight,
 } from 'lucide-react'
+import CustomerFilters from './CustomerFilters'
 
 interface Customer {
-  id: string
-  firstName: string
-  lastName: string
+  id: number
+  first_name: string
+  last_name: string
   email: string
-  phone: string
-  propertiesCount: number
-  status: 'active' | 'inactive'
-  plan: string
-  createdAt: string
+  phone: string | null
+  status: string
+  created_at: string
+  properties_count: number
+  plan_name: string | null
 }
 
-export default function CustomersPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+export default async function CustomersPage() {
+  const supabase = await createClient()
 
-  // Mock data
-  const customers: Customer[] = [
-    { id: '5', firstName: 'John', lastName: 'Smith', email: 'john.customer@example.com', phone: '(314) 555-1001', propertiesCount: 2, status: 'active', plan: 'Premium', createdAt: '2024-06-15' },
-    { id: '6', firstName: 'Jane', lastName: 'Doe', email: 'jane.customer@example.com', phone: '(816) 555-1002', propertiesCount: 1, status: 'active', plan: 'Premium', createdAt: '2024-08-22' },
-    { id: '7', firstName: 'Bob', lastName: 'Wilson', email: 'bob.customer@example.com', phone: '(417) 555-1003', propertiesCount: 1, status: 'active', plan: 'Basic', createdAt: '2024-09-10' },
-    { id: '8', firstName: 'Sarah', lastName: 'Johnson', email: 'sarah.j@example.com', phone: '(573) 555-2001', propertiesCount: 3, status: 'active', plan: 'Premium', createdAt: '2024-03-05' },
-    { id: '9', firstName: 'Tom', lastName: 'Brown', email: 'tom.brown@example.com', phone: '(636) 555-3001', propertiesCount: 1, status: 'inactive', plan: 'Standard', createdAt: '2024-01-20' },
-  ]
+  // Fetch customers with their property counts
+  const { data: customers, error } = await supabase
+    .from('lwp_users')
+    .select(`
+      id, first_name, last_name, email, phone, status, created_at,
+      properties:lwp_properties(count)
+    `)
+    .eq('role', 'customer')
+    .order('last_name')
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch =
-      `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || customer.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  if (error) {
+    console.error('Error fetching customers:', error)
+  }
+
+  // Transform data to include property counts
+  const customersWithCounts: Customer[] = (customers || []).map(c => ({
+    id: c.id,
+    first_name: c.first_name || '',
+    last_name: c.last_name || '',
+    email: c.email,
+    phone: c.phone,
+    status: c.status || 'active',
+    created_at: c.created_at,
+    properties_count: Array.isArray(c.properties) ? c.properties[0]?.count || 0 : 0,
+    plan_name: null, // Will be derived from their properties
+  }))
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -50,7 +57,7 @@ export default function CustomersPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Customers</h1>
           <p className="text-[#a1a1aa]">
-            Manage your customer accounts
+            Manage your customer accounts ({customersWithCounts.length} total)
           </p>
         </div>
         <Link
@@ -62,30 +69,7 @@ export default function CustomersPage() {
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
+      <CustomerFilters />
 
       {/* Customer List */}
       <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl overflow-hidden">
@@ -96,17 +80,16 @@ export default function CustomersPage() {
                 <th className="text-left px-6 py-4 text-sm font-medium text-[#71717a]">Customer</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[#71717a] hidden md:table-cell">Contact</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[#71717a] hidden lg:table-cell">Properties</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[#71717a] hidden lg:table-cell">Plan</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[#71717a]">Status</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#27272a]">
-              {filteredCustomers.map((customer) => (
+              {customersWithCounts.map((customer) => (
                 <tr key={customer.id} className="hover:bg-[#171717] transition-colors">
                   <td className="px-6 py-4">
                     <div>
-                      <p className="font-medium">{customer.firstName} {customer.lastName}</p>
+                      <p className="font-medium">{customer.first_name} {customer.last_name}</p>
                       <p className="text-sm text-[#71717a] md:hidden">{customer.email}</p>
                     </div>
                   </td>
@@ -116,26 +99,19 @@ export default function CustomersPage() {
                         <Mail className="w-4 h-4" />
                         {customer.email}
                       </p>
-                      <p className="flex items-center gap-2 text-[#71717a]">
-                        <Phone className="w-4 h-4" />
-                        {customer.phone}
-                      </p>
+                      {customer.phone && (
+                        <p className="flex items-center gap-2 text-[#71717a]">
+                          <Phone className="w-4 h-4" />
+                          {customer.phone}
+                        </p>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 hidden lg:table-cell">
                     <div className="flex items-center gap-2 text-sm">
                       <Building2 className="w-4 h-4 text-[#71717a]" />
-                      {customer.propertiesCount}
+                      {customer.properties_count}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 hidden lg:table-cell">
-                    <span className={`text-sm px-2 py-1 rounded ${
-                      customer.plan === 'Premium' ? 'bg-purple-500/10 text-purple-400' :
-                      customer.plan === 'Standard' ? 'bg-blue-500/10 text-blue-400' :
-                      'bg-[#27272a] text-[#a1a1aa]'
-                    }`}>
-                      {customer.plan}
-                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-xs px-2 py-1 rounded-full ${
@@ -160,7 +136,7 @@ export default function CustomersPage() {
           </table>
         </div>
 
-        {filteredCustomers.length === 0 && (
+        {customersWithCounts.length === 0 && (
           <div className="text-center py-12">
             <p className="text-[#71717a]">No customers found</p>
           </div>

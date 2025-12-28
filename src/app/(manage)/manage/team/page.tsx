@@ -1,9 +1,6 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  Search,
   Plus,
   UserCog,
   Mail,
@@ -11,84 +8,55 @@ import {
   Calendar,
   MapPin,
 } from 'lucide-react'
+import TeamFilters from './TeamFilters'
 
 interface TeamMember {
-  id: string
-  firstName: string
-  lastName: string
+  id: number
+  first_name: string
+  last_name: string
   email: string
-  phone: string
+  phone: string | null
   role: 'owner' | 'admin' | 'technician'
-  status: 'active' | 'inactive'
-  hireDate: string
-  assignedProperties: number
-  completedInspections: number
-  avatar?: string
+  status: string
+  created_at: string
+  assigned_properties: number
+  completed_inspections: number
 }
 
-export default function TeamPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<string>('all')
+export default async function TeamPage() {
+  const supabase = await createClient()
 
-  // Mock data
-  const teamMembers: TeamMember[] = [
-    {
-      id: '1',
-      firstName: 'Owner',
-      lastName: 'Account',
-      email: 'owner@lakewatchpros.com',
-      phone: '(314) 555-0001',
-      role: 'owner',
-      status: 'active',
-      hireDate: 'Jan 1, 2020',
-      assignedProperties: 0,
-      completedInspections: 0,
-    },
-    {
-      id: '2',
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@lakewatchpros.com',
-      phone: '(314) 555-0002',
-      role: 'admin',
-      status: 'active',
-      hireDate: 'Mar 15, 2022',
-      assignedProperties: 0,
-      completedInspections: 0,
-    },
-    {
-      id: '3',
-      firstName: 'Mike',
-      lastName: 'Johnson',
-      email: 'mike@lakewatchpros.com',
-      phone: '(314) 555-0003',
-      role: 'technician',
-      status: 'active',
-      hireDate: 'Jun 1, 2023',
-      assignedProperties: 12,
-      completedInspections: 156,
-    },
-    {
-      id: '4',
-      firstName: 'Sarah',
-      lastName: 'Tech',
-      email: 'sarah@lakewatchpros.com',
-      phone: '(314) 555-0004',
-      role: 'technician',
-      status: 'active',
-      hireDate: 'Sep 15, 2023',
-      assignedProperties: 8,
-      completedInspections: 87,
-    },
-  ]
+  // Fetch team members (non-customers)
+  const { data: teamMembers, error } = await supabase
+    .from('lwp_users')
+    .select('*')
+    .in('role', ['owner', 'admin', 'technician'])
+    .order('role')
+    .order('last_name')
 
-  const filteredMembers = teamMembers.filter(member => {
-    const matchesSearch =
-      `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = roleFilter === 'all' || member.role === roleFilter
-    return matchesSearch && matchesRole
-  })
+  if (error) {
+    console.error('Error fetching team:', error)
+  }
+
+  // Get property assignments for technicians
+  const technicianIds = (teamMembers || [])
+    .filter(m => m.role === 'technician')
+    .map(m => m.id)
+
+  // For now, we'll show 0 for assigned properties and inspections
+  // In a real app, you'd have a proper assignment table
+  const membersWithStats: TeamMember[] = (teamMembers || []).map(m => ({
+    id: m.id,
+    first_name: m.first_name || '',
+    last_name: m.last_name || '',
+    email: m.email,
+    phone: m.phone,
+    role: m.role as 'owner' | 'admin' | 'technician',
+    status: m.status || 'active',
+    created_at: m.created_at,
+    assigned_properties: 0, // TODO: Get from assignments table
+    completed_inspections: 0, // TODO: Get from inspections table
+  }))
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -102,9 +70,9 @@ export default function TeamPage() {
   }
 
   const stats = {
-    total: teamMembers.length,
-    technicians: teamMembers.filter(m => m.role === 'technician').length,
-    admins: teamMembers.filter(m => m.role === 'admin' || m.role === 'owner').length,
+    total: membersWithStats.length,
+    technicians: membersWithStats.filter(m => m.role === 'technician').length,
+    admins: membersWithStats.filter(m => m.role === 'admin' || m.role === 'owner').length,
   }
 
   return (
@@ -113,7 +81,7 @@ export default function TeamPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Team</h1>
           <p className="text-[#a1a1aa]">
-            Manage staff accounts and permissions
+            Manage staff accounts and permissions ({membersWithStats.length} members)
           </p>
         </div>
         <Link
@@ -141,33 +109,11 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a]" />
-          <input
-            type="text"
-            placeholder="Search team members..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17]"
-        >
-          <option value="all">All Roles</option>
-          <option value="owner">Owner</option>
-          <option value="admin">Admin</option>
-          <option value="technician">Technician</option>
-        </select>
-      </div>
+      <TeamFilters />
 
       {/* Team Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMembers.map((member) => (
+        {membersWithStats.map((member) => (
           <Link
             key={member.id}
             href={`/manage/team/${member.id}`}
@@ -180,11 +126,11 @@ export default function TeamPage() {
                   member.role === 'admin' ? 'bg-blue-500/10 text-blue-400' :
                   'bg-[#4cbb17]/10 text-[#4cbb17]'
                 }`}>
-                  {member.firstName[0]}{member.lastName[0]}
+                  {(member.first_name?.[0] || '?')}{(member.last_name?.[0] || '')}
                 </div>
                 <div>
                   <h3 className="font-semibold group-hover:text-[#4cbb17] transition-colors">
-                    {member.firstName} {member.lastName}
+                    {member.first_name} {member.last_name}
                   </h3>
                   <span className={`text-xs px-2 py-0.5 rounded border ${getRoleBadge(member.role)}`}>
                     {member.role}
@@ -205,21 +151,23 @@ export default function TeamPage() {
                 <Mail className="w-4 h-4 text-[#71717a]" />
                 <span className="truncate">{member.email}</span>
               </div>
-              <div className="flex items-center gap-2 text-[#a1a1aa]">
-                <Phone className="w-4 h-4 text-[#71717a]" />
-                <span>{member.phone}</span>
-              </div>
+              {member.phone && (
+                <div className="flex items-center gap-2 text-[#a1a1aa]">
+                  <Phone className="w-4 h-4 text-[#71717a]" />
+                  <span>{member.phone}</span>
+                </div>
+              )}
             </div>
 
             {member.role === 'technician' && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#27272a] text-sm">
                 <div className="flex items-center gap-2 text-[#71717a]">
                   <MapPin className="w-4 h-4" />
-                  <span>{member.assignedProperties} properties</span>
+                  <span>{member.assigned_properties} properties</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#71717a]">
                   <Calendar className="w-4 h-4" />
-                  <span>{member.completedInspections} inspections</span>
+                  <span>{member.completed_inspections} inspections</span>
                 </div>
               </div>
             )}
@@ -227,7 +175,7 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {filteredMembers.length === 0 && (
+      {membersWithStats.length === 0 && (
         <div className="text-center py-12 bg-[#0f0f0f] border border-[#27272a] rounded-xl">
           <UserCog className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
           <p className="text-[#71717a]">No team members found</p>
