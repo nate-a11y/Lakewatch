@@ -145,10 +145,13 @@ export default function InvoicesPage() {
             Manage billing and payments
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
+        <Link
+          href="/manage/invoices/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+        >
           <Plus className="w-5 h-5" />
           Create Invoice
-        </button>
+        </Link>
       </div>
 
       {/* Stats */}

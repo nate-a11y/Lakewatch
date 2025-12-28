@@ -100,10 +100,13 @@ export default function ChecklistsPage() {
             Manage inspection checklists and templates
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors">
+        <Link
+          href="/manage/checklists/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+        >
           <Plus className="w-5 h-5" />
           Create Checklist
-        </button>
+        </Link>
       </div>
 
       {/* Search */}
@@ -149,9 +152,13 @@ export default function ChecklistsPage() {
                 <button className="p-2 hover:bg-[#27272a] rounded-lg transition-colors" title="Duplicate">
                   <Copy className="w-4 h-4 text-[#71717a]" />
                 </button>
-                <button className="p-2 hover:bg-[#27272a] rounded-lg transition-colors" title="Edit">
+                <Link
+                  href={`/manage/checklists/${checklist.id}`}
+                  className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
+                  title="Edit"
+                >
                   <Edit className="w-4 h-4 text-[#71717a]" />
-                </button>
+                </Link>
                 <Link
                   href={`/manage/checklists/${checklist.id}`}
                   className="p-2 hover:bg-[#27272a] rounded-lg transition-colors"
