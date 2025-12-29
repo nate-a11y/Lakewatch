@@ -14,11 +14,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', href, children, ...props }, ref) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4cbb17] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060606] disabled:opacity-50 disabled:pointer-events-none rounded-lg'
+      'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4cbb17] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060606] disabled:opacity-50 disabled:pointer-events-none rounded-lg active:scale-[0.98]'
 
     const variants = {
       primary:
-        'bg-[#4cbb17] text-[#060606] hover:bg-[#60e421] active:bg-[#3a8e11]',
+        'bg-[#4cbb17] text-[#060606] hover:bg-[#60e421] hover:shadow-lg hover:shadow-[#4cbb17]/25 active:bg-[#3a8e11]',
       secondary:
         'bg-[#1a1a1a] text-white hover:bg-[#2a2a2a] border border-[#27272a]',
       outline:

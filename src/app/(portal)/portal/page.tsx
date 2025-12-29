@@ -10,12 +10,13 @@ import {
   Clock,
   MessageSquare,
   CreditCard,
-  Sun,
-  Thermometer,
   Plus,
   Bell,
   ChevronRight,
 } from 'lucide-react'
+import { MobileQuickActionsFAB } from '@/components/portal/MobileQuickActionsFAB'
+import { WeatherWidget } from '@/components/portal/WeatherWidget'
+import { getWeatherWithFallback } from '@/lib/weather'
 
 function getTimeOfDayGreeting(): string {
   const hour = new Date().getHours()
@@ -110,6 +111,9 @@ export default async function PortalDashboard() {
   const properties = propertiesResult.data || []
   const primaryProperty = properties[0]
 
+  // Fetch weather data
+  const weather = await getWeatherWithFallback()
+
   const stats = {
     properties: propertiesResult.count || 0,
     upcomingInspections: upcomingInspections.length,
@@ -184,21 +188,10 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Weather Widget */}
-        {primaryProperty && (
-          <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Sun className="w-6 h-6 text-yellow-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <Thermometer className="w-4 h-4 text-[#71717a]" />
-                <span className="font-semibold">68°F</span>
-                <span className="text-[#71717a]">Partly Cloudy</span>
-              </div>
-              <p className="text-sm text-[#71717a]">{primaryProperty.name}</p>
-            </div>
-          </div>
-        )}
+        <WeatherWidget
+          weather={weather}
+          propertyName={primaryProperty?.name}
+        />
       </div>
 
       {/* Property Health Cards */}
@@ -513,6 +506,9 @@ export default async function PortalDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Quick Actions FAB */}
+      <MobileQuickActionsFAB />
     </div>
   )
 }

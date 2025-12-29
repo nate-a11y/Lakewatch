@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { VoiceNoteButton } from '@/components/field/VoiceNoteButton'
 
 type ChecklistItemStatus = 'pass' | 'fail' | 'attention' | 'na' | null
 type IssueSeverity = 'low' | 'medium' | 'high' | 'critical'
@@ -777,14 +778,19 @@ export default function InspectionClient({
         )}
 
         <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-4 mb-6">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#4cbb17]" />
-            Summary Notes
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#4cbb17]" />
+              Summary Notes
+            </h2>
+            <VoiceNoteButton
+              onTranscript={(text) => setSummaryNotes((prev) => prev ? `${prev} ${text}` : text)}
+            />
+          </div>
           <textarea
             value={summaryNotes}
             onChange={(e) => setSummaryNotes(e.target.value)}
-            placeholder="Add any additional notes about the inspection..."
+            placeholder="Add any additional notes about the inspection... (or tap the mic to dictate)"
             rows={4}
             className="w-full px-3 py-2 bg-black/30 border border-[#27272a] rounded-lg text-sm focus:outline-none focus:border-[#4cbb17] resize-none"
           />
