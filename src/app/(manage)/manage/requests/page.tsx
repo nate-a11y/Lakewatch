@@ -33,6 +33,8 @@ export default async function RequestsPage() {
     })
   }
 
+  const now = new Date().getTime()
+
   const requestsList = (requests || []).map((r) => {
     const propertyData = r.property as { id: number; name: string } | { id: number; name: string }[] | null
     const property = Array.isArray(propertyData) ? propertyData[0] : propertyData
@@ -42,6 +44,10 @@ export default async function RequestsPage() {
 
     const assignedData = r.assigned_to as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
     const assignedTo = Array.isArray(assignedData) ? assignedData[0] : assignedData
+
+    // Calculate hours since request was created for SLA tracking
+    const createdTime = new Date(r.created_at).getTime()
+    const hoursSinceCreated = Math.floor((now - createdTime) / (1000 * 60 * 60))
 
     return {
       id: r.id,
@@ -64,8 +70,15 @@ export default async function RequestsPage() {
       category: r.request_type || 'General',
       createdAt: formatDate(r.created_at),
       scheduledFor: r.scheduled_date ? formatDate(r.scheduled_date) : null,
+      hoursSinceCreated, // For SLA tracking
     }
   })
+
+  // Calculate average response time for pending requests
+  const pendingRequests = requestsList.filter(r => r.status === 'pending')
+  const avgResponseTime = pendingRequests.length > 0
+    ? Math.round(pendingRequests.reduce((sum, r) => sum + r.hoursSinceCreated, 0) / pendingRequests.length)
+    : 0
 
   const stats = {
     open: requestsList.filter(r => r.status === 'pending').length,
@@ -79,9 +92,20 @@ export default async function RequestsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Service Requests</h1>
-          <p className="text-[#a1a1aa]">
-            Manage customer service requests and work orders ({requestsList.length} total)
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-[#a1a1aa]">
+              Manage customer service requests and work orders ({requestsList.length} total)
+            </p>
+            {avgResponseTime > 0 && (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                avgResponseTime < 24 ? 'bg-green-500/10 text-green-500' :
+                avgResponseTime < 48 ? 'bg-yellow-500/10 text-yellow-500' :
+                'bg-red-500/10 text-red-500'
+              }`}>
+                Avg Response: {avgResponseTime < 24 ? `${avgResponseTime}h` : `${Math.round(avgResponseTime / 24)}d`}
+              </span>
+            )}
+          </div>
         </div>
         <Link
           href="/manage/requests/new"

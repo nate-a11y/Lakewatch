@@ -17,6 +17,7 @@ interface Request {
   category: string
   createdAt: string
   scheduledFor: string | null
+  hoursSinceCreated: number
 }
 
 interface KanbanViewProps {

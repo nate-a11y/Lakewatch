@@ -39,6 +39,11 @@ export default async function AdminDashboardPage() {
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
 
+  // Calculate date ranges for comparisons
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
   // Fetch real stats in parallel
   const [
     customersResult,
@@ -49,6 +54,11 @@ export default async function AdminDashboardPage() {
     thisMonthRevenueResult,
     lastMonthRevenueResult,
     todayScheduleResult,
+    // Comparison queries
+    customersLastWeekResult,
+    propertiesLastWeekResult,
+    inspectionsYesterdayResult,
+    requestsLastWeekResult,
   ] = await Promise.all([
     supabase.from('lwp_users').select('id', { count: 'exact' }).eq('role', 'customer'),
     supabase.from('lwp_properties').select('id', { count: 'exact' }).eq('status', 'active'),
@@ -66,6 +76,14 @@ export default async function AdminDashboardPage() {
       .eq('scheduled_date', today)
       .order('scheduled_time')
       .limit(5),
+    // New customers in last week vs week before
+    supabase.from('lwp_users').select('id', { count: 'exact' }).eq('role', 'customer').gte('created_at', twoWeeksAgo).lt('created_at', weekAgo),
+    // Properties added this week vs last week
+    supabase.from('lwp_properties').select('id', { count: 'exact' }).gte('created_at', weekAgo),
+    // Inspections yesterday for comparison
+    supabase.from('lwp_inspections').select('id', { count: 'exact' }).eq('scheduled_date', yesterday),
+    // Requests created in last week
+    supabase.from('lwp_service_requests').select('id', { count: 'exact' }).eq('status', 'pending').gte('created_at', weekAgo),
   ])
 
   // Get pending requests details
@@ -102,6 +120,11 @@ export default async function AdminDashboardPage() {
   const lastMonthRevenue = lastMonthRevenueResult.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
   const revenueChange = lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1) : '0'
 
+  const newPropertiesThisWeek = propertiesLastWeekResult.count || 0
+  const inspectionsYesterday = inspectionsYesterdayResult.count || 0
+  const inspectionsDiff = (inspectionsTodayResult.count || 0) - inspectionsYesterday
+  const newRequestsThisWeek = requestsLastWeekResult.count || 0
+
   const stats = {
     activeCustomers: customersResult.count || 0,
     activeProperties: propertiesResult.count || 0,
@@ -109,6 +132,10 @@ export default async function AdminDashboardPage() {
     pendingRequests: pendingRequestsResult.count || 0,
     overdueInvoices: overdueInvoicesResult.data?.length || 0,
     revenueThisMonth: thisMonthRevenue,
+    // Comparison data
+    newPropertiesThisWeek,
+    inspectionsDiff,
+    newRequestsThisWeek,
   }
 
   const todaySchedule = (todayScheduleResult.data || []).map((item) => {
@@ -165,30 +192,41 @@ export default async function AdminDashboardPage() {
         </Link>
 
         <Link href="/manage/properties" className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 hover:border-[#4cbb17]/50 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
               <Building2 className="w-5 h-5 text-purple-500" />
             </div>
+            {stats.newPropertiesThisWeek > 0 && (
+              <span className="text-xs text-green-500">+{stats.newPropertiesThisWeek} this week</span>
+            )}
           </div>
           <p className="text-2xl font-bold">{stats.activeProperties}</p>
           <p className="text-sm text-[#71717a]">Properties</p>
         </Link>
 
         <Link href="/manage/schedule" className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 hover:border-[#4cbb17]/50 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-lg bg-[#4cbb17]/10 flex items-center justify-center">
               <ClipboardCheck className="w-5 h-5 text-[#4cbb17]" />
             </div>
+            {stats.inspectionsDiff !== 0 && (
+              <span className={`text-xs ${stats.inspectionsDiff > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {stats.inspectionsDiff > 0 ? '+' : ''}{stats.inspectionsDiff} vs yesterday
+              </span>
+            )}
           </div>
           <p className="text-2xl font-bold">{stats.inspectionsToday}</p>
           <p className="text-sm text-[#71717a]">Inspections Today</p>
         </Link>
 
         <Link href="/manage/requests" className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6 hover:border-[#4cbb17]/50 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
               <ClipboardList className="w-5 h-5 text-yellow-500" />
             </div>
+            {stats.newRequestsThisWeek > 0 && (
+              <span className="text-xs text-yellow-500">+{stats.newRequestsThisWeek} this week</span>
+            )}
           </div>
           <p className="text-2xl font-bold">{stats.pendingRequests}</p>
           <p className="text-sm text-[#71717a]">Pending Requests</p>

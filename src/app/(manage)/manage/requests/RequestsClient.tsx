@@ -27,6 +27,7 @@ interface Request {
   category: string
   createdAt: string
   scheduledFor: string | null
+  hoursSinceCreated: number
 }
 
 interface RequestsClientProps {
@@ -62,6 +63,32 @@ export default function RequestsClient({ requests }: RequestsClientProps) {
         return <XCircle className="w-4 h-4 text-[#71717a]" />
       default:
         return <AlertTriangle className="w-4 h-4 text-[#71717a]" />
+    }
+  }
+
+  const getSLAIndicator = (hours: number, status: string) => {
+    // Don't show SLA for completed/cancelled requests
+    if (status === 'completed' || status === 'cancelled') return null
+
+    // SLA thresholds: <24h = green, 24-48h = yellow, >48h = red
+    if (hours < 24) {
+      return (
+        <span className="text-xs text-green-500" title="Within SLA">
+          {hours}h
+        </span>
+      )
+    } else if (hours < 48) {
+      return (
+        <span className="text-xs text-yellow-500 font-medium" title="Approaching SLA limit">
+          {Math.round(hours / 24)}d
+        </span>
+      )
+    } else {
+      return (
+        <span className="text-xs text-red-500 font-medium animate-pulse" title="SLA exceeded">
+          {Math.round(hours / 24)}d ⚠
+        </span>
+      )
     }
   }
 
@@ -125,6 +152,7 @@ export default function RequestsClient({ requests }: RequestsClientProps) {
                       {request.customer.name}
                     </span>
                     <span className="text-xs">{request.createdAt}</span>
+                    {getSLAIndicator(request.hoursSinceCreated, request.status)}
                   </div>
                 </div>
                 <div className="flex sm:flex-col items-center sm:items-end gap-3">
