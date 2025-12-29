@@ -5,10 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface ChecklistFiltersProps {
-  onDuplicate?: (name: string) => void
-}
-
 export default function ChecklistFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()

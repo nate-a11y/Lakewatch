@@ -7,10 +7,7 @@ import {
   Phone,
   Building2,
   FileText,
-  MessageSquare,
-  Edit,
 } from 'lucide-react'
-import EditableNotes from '@/components/EditableNotes'
 import CustomerActionButtons from './CustomerActionButtons'
 import { CustomerHealthScore } from '@/components/manage/CustomerHealthScore'
 import { InternalNotesTab } from '@/components/manage/InternalNotesTab'

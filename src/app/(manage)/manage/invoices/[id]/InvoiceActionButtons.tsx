@@ -9,7 +9,7 @@ interface InvoiceActionButtonsProps {
   status: string
 }
 
-export default function InvoiceActionButtons({ invoiceId, status }: InvoiceActionButtonsProps) {
+export default function InvoiceActionButtons({ status }: InvoiceActionButtonsProps) {
   const router = useRouter()
 
   const handleRecordPayment = () => {

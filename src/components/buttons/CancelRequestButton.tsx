@@ -8,7 +8,7 @@ interface CancelRequestButtonProps {
   requestId: string
 }
 
-export default function CancelRequestButton({ requestId }: CancelRequestButtonProps) {
+export default function CancelRequestButton({}: CancelRequestButtonProps) {
   const router = useRouter()
   const [isConfirming, setIsConfirming] = useState(false)
 

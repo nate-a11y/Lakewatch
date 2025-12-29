@@ -29,7 +29,6 @@ const TAG_OPTIONS = [
 ]
 
 export function InternalNotesTab({
-  customerId: _customerId,
   initialNotes = [],
   customerTags = [],
   className,

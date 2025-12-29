@@ -6,7 +6,7 @@ export default async function HistoryPage() {
   const supabase = await createClient()
 
   // Get current user (technician)
-  const { data: { user: _user } } = await supabase.auth.getUser()
+  await supabase.auth.getUser()
 
   // Fetch completed inspections for this technician
   const { data: inspections, error: inspectionsError } = await supabase

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import ScheduleCalendar from './ScheduleCalendar'
 import { ScheduleWithSidebar } from './ScheduleWithSidebar'
 
 // Helper to get today's date string (server-side only)

@@ -9,7 +9,7 @@ interface InspectionActionButtonsProps {
   customerId: number
 }
 
-export default function InspectionActionButtons({ inspectionId, customerId }: InspectionActionButtonsProps) {
+export default function InspectionActionButtons({ customerId }: InspectionActionButtonsProps) {
   const router = useRouter()
 
   const handleExportPDF = () => {

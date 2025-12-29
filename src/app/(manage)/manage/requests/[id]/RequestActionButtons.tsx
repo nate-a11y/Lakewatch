@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Edit, Calendar, FileText, XCircle, MessageSquare, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import Link from 'next/link'
 
 interface RequestActionButtonsProps {
   requestId: string
@@ -11,7 +10,7 @@ interface RequestActionButtonsProps {
   status: string
 }
 
-export default function RequestActionButtons({ requestId, customerId, status }: RequestActionButtonsProps) {
+export default function RequestActionButtons({ requestId, status }: RequestActionButtonsProps) {
   const router = useRouter()
 
   const handleMarkComplete = () => {
@@ -50,7 +49,7 @@ interface QuickActionsProps {
   customerId: number
 }
 
-export function RequestQuickActions({ requestId, customerId }: QuickActionsProps) {
+export function RequestQuickActions({ requestId }: QuickActionsProps) {
   const router = useRouter()
 
   const handleReschedule = () => {
@@ -119,9 +118,7 @@ interface AssignTechnicianButtonProps {
   requestId: string
 }
 
-export function AssignTechnicianButton({ requestId }: AssignTechnicianButtonProps) {
-  const router = useRouter()
-
+export function AssignTechnicianButton({}: AssignTechnicianButtonProps) {
   const handleAssign = () => {
     toast.info('Assign technician modal will open here')
   }
@@ -141,7 +138,7 @@ interface ChangeAssignmentButtonProps {
   requestId: string
 }
 
-export function ChangeAssignmentButton({ requestId }: ChangeAssignmentButtonProps) {
+export function ChangeAssignmentButton({}: ChangeAssignmentButtonProps) {
   const handleChange = () => {
     toast.info('Change assignment modal will open here')
   }
