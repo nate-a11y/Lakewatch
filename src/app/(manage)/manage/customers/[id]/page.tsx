@@ -13,6 +13,7 @@ import {
 import EditableNotes from '@/components/EditableNotes'
 import CustomerActionButtons from './CustomerActionButtons'
 import { CustomerHealthScore } from '@/components/manage/CustomerHealthScore'
+import { InternalNotesTab } from '@/components/manage/InternalNotesTab'
 
 export default async function CustomerDetailPage({
   params,
@@ -281,11 +282,11 @@ export default async function CustomerDetailPage({
             </Link>
           </section>
 
-          {/* Notes - using EditableNotes component */}
-          <EditableNotes
-            initialNotes=""
-            title="Notes"
-            placeholder="Add customer notes..."
+          {/* Internal Notes with Tags */}
+          <InternalNotesTab
+            customerId={id}
+            initialNotes={[]}
+            customerTags={[]}
           />
 
           {/* Recent Activity */}

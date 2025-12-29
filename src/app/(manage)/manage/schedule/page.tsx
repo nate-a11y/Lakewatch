@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import ScheduleCalendar from './ScheduleCalendar'
+import { ScheduleWithSidebar } from './ScheduleWithSidebar'
 
 // Helper to get today's date string (server-side only)
 function getTodayString() {
@@ -125,6 +126,87 @@ export default async function SchedulePage() {
     todayCount: techJobCounts[tech.id] || 0,
   }))
 
+  // Fetch properties that need visits (for unscheduled queue)
+  const { data: propertiesData } = await supabase
+    .from('lwp_properties')
+    .select(`
+      id, name, street, city, status,
+      service_plan:lwp_service_plans(name, visit_frequency),
+      owner:lwp_users!owner_id(first_name, last_name)
+    `)
+    .eq('status', 'active')
+    .limit(50)
+
+  // Get last inspection date for each property
+  const propertyIds = (propertiesData || []).map(p => p.id)
+  let lastInspections: { property_id: number; scheduled_date: string }[] = []
+  if (propertyIds.length > 0) {
+    const { data: inspData } = await supabase
+      .from('lwp_inspections')
+      .select('property_id, scheduled_date')
+      .in('property_id', propertyIds)
+      .eq('status', 'completed')
+      .order('scheduled_date', { ascending: false })
+
+    // Get most recent inspection per property
+    const latestMap = new Map<number, string>()
+    inspData?.forEach(i => {
+      if (!latestMap.has(i.property_id)) {
+        latestMap.set(i.property_id, i.scheduled_date)
+      }
+    })
+    lastInspections = Array.from(latestMap, ([property_id, scheduled_date]) => ({ property_id, scheduled_date }))
+  }
+
+  // Build unscheduled properties list
+  const unscheduledProperties = (propertiesData || [])
+    .map(prop => {
+      const planData = prop.service_plan as { name: string; visit_frequency: number } | { name: string; visit_frequency: number }[] | null
+      const plan = Array.isArray(planData) ? planData[0] : planData
+      const ownerData = prop.owner as { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+      const owner = Array.isArray(ownerData) ? ownerData[0] : ownerData
+
+      const lastVisit = lastInspections.find(i => i.property_id === prop.id)
+      const lastVisitDate = lastVisit ? lastVisit.scheduled_date : null
+      const visitFrequency = plan?.visit_frequency || 30 // default 30 days
+
+      let daysSinceLastVisit: number | null = null
+      let priority: 'overdue' | 'due-soon' | 'upcoming' = 'upcoming'
+
+      if (lastVisitDate) {
+        daysSinceLastVisit = Math.floor((new Date().getTime() - new Date(lastVisitDate).getTime()) / (1000 * 60 * 60 * 24))
+        if (daysSinceLastVisit > visitFrequency) {
+          priority = 'overdue'
+        } else if (daysSinceLastVisit > visitFrequency - 7) {
+          priority = 'due-soon'
+        }
+      } else {
+        // Never visited - consider overdue
+        priority = 'overdue'
+      }
+
+      return {
+        id: String(prop.id),
+        name: prop.name,
+        address: `${prop.street}, ${prop.city}`,
+        ownerName: owner ? `${owner.first_name} ${owner.last_name}` : 'Unknown',
+        servicePlan: plan?.name || 'Standard',
+        lastVisit: lastVisitDate,
+        daysSinceLastVisit,
+        visitFrequency,
+        priority,
+      }
+    })
+    .filter(p => p.priority === 'overdue' || p.priority === 'due-soon')
+    .sort((a, b) => {
+      // Sort by priority (overdue first, then due-soon)
+      if (a.priority === 'overdue' && b.priority !== 'overdue') return -1
+      if (a.priority !== 'overdue' && b.priority === 'overdue') return 1
+      // Then by days since last visit (descending)
+      return (b.daysSinceLastVisit || 999) - (a.daysSinceLastVisit || 999)
+    })
+    .slice(0, 20)
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -143,7 +225,11 @@ export default async function SchedulePage() {
         </Link>
       </div>
 
-      <ScheduleCalendar items={scheduleItems} technicians={technicians} />
+      <ScheduleWithSidebar
+        scheduleItems={scheduleItems}
+        technicians={technicians}
+        unscheduledProperties={unscheduledProperties}
+      />
     </div>
   )
 }
