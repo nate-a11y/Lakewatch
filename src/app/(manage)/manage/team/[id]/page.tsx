@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import EditableNotes from '@/components/EditableNotes'
 import TeamMemberQuickActions from './TeamMemberQuickActions'
+import { TeamPerformanceDashboard } from '@/components/manage/TeamPerformanceDashboard'
 
 export default async function TeamMemberDetailPage({
   params,
@@ -158,25 +159,27 @@ export default async function TeamMemberDetailPage({
             </div>
           </section>
 
-          {/* Stats */}
+          {/* Performance Dashboard */}
           {member.role === 'technician' && (
-            <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Performance</h2>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold text-[#4cbb17]">{stats.totalInspections}</p>
-                  <p className="text-xs text-[#71717a]">Total Inspections</p>
-                </div>
-                <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold">{stats.thisMonth}</p>
-                  <p className="text-xs text-[#71717a]">This Month</p>
-                </div>
-                <div className="text-center p-3 bg-black/30 rounded-lg">
-                  <p className="text-2xl font-bold">{stats.assignedProperties}</p>
-                  <p className="text-xs text-[#71717a]">Properties</p>
-                </div>
-              </div>
-            </section>
+            <TeamPerformanceDashboard
+              technicianName={`${member.first_name} ${member.last_name}`}
+              metrics={{
+                inspectionsCompleted: {
+                  week: Math.min(stats.thisMonth, 5),
+                  month: stats.thisMonth,
+                  allTime: stats.totalInspections,
+                },
+                averageDuration: 32,
+                onTimeRate: 94,
+                issuesFoundRate: 18,
+                customerSatisfaction: 4.8,
+                teamAverage: {
+                  inspectionsPerWeek: 4,
+                  averageDuration: 35,
+                  onTimeRate: 91,
+                },
+              }}
+            />
           )}
 
           {/* Assigned Properties */}

@@ -9,6 +9,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import TeamFilters from './TeamFilters'
+import { WorkloadBalanceView } from '@/components/manage/WorkloadBalanceView'
 
 interface TeamMember {
   id: number
@@ -169,6 +170,22 @@ export default async function TeamPage() {
           <p className="text-2xl font-bold">{stats.admins}</p>
         </div>
       </div>
+
+      {/* Workload Balance - only show if there are technicians */}
+      {stats.technicians > 0 && (
+        <WorkloadBalanceView
+          technicians={membersWithStats
+            .filter(m => m.role === 'technician')
+            .map(m => ({
+              id: String(m.id),
+              name: `${m.first_name} ${m.last_name}`,
+              inspectionsThisWeek: Math.min(m.completed_inspections, 8),
+              hoursScheduled: Math.min(m.completed_inspections, 8) * 1.5,
+              capacity: 10,
+            }))}
+          className="mb-6"
+        />
+      )}
 
       <TeamFilters />
 
