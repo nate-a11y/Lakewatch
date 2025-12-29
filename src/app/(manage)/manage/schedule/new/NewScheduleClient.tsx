@@ -109,11 +109,30 @@ export default function NewScheduleClient({
 
     setIsSubmitting(true)
 
-    // TODO: Implement actual API call to create inspection
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: parseInt(formData.propertyId),
+          technicianId: parseInt(formData.technicianId),
+          scheduledDate: formData.date,
+          scheduledTime: formData.time,
+          notes: formData.notes,
+        }),
+      })
 
-    toast.success('Inspection scheduled successfully')
-    router.push('/manage/schedule')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to schedule inspection')
+      }
+
+      toast.success('Inspection scheduled successfully')
+      router.push('/manage/schedule')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to schedule inspection')
+      setIsSubmitting(false)
+    }
   }
 
   return (

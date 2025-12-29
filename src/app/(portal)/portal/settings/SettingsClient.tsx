@@ -81,10 +81,32 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
 
   const handleSave = async () => {
     setIsSaving(true)
-    // TODO: Implement actual API call to save settings
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    toast.success('Settings saved successfully')
-    setIsSaving(false)
+
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          notificationEmail: notifications.some(n => n.email),
+          notificationSms: notifications.some(n => n.sms),
+          notificationPush: notifications.some(n => n.push),
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save settings')
+      }
+
+      toast.success('Settings saved successfully')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save settings')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const toggleNotification = (index: number, channel: 'email' | 'sms' | 'push') => {

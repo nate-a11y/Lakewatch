@@ -101,11 +101,35 @@ export default function NewInvoiceClient({
 
     setIsSubmitting(true)
 
-    // TODO: Implement actual API call to create invoice
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: parseInt(formData.customerId),
+          propertyId: formData.propertyId ? parseInt(formData.propertyId) : null,
+          lineItems: lineItems.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+          dueDate: formData.dueDate,
+          notes: formData.notes,
+          createInStripe: true,
+        }),
+      })
 
-    toast.success('Invoice created successfully')
-    router.push('/manage/invoices')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create invoice')
+      }
+
+      toast.success('Invoice created successfully')
+      router.push('/manage/invoices')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create invoice')
+      setIsSubmitting(false)
+    }
   }
 
   return (

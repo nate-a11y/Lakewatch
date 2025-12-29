@@ -167,15 +167,42 @@ export default function RequestDetailClient({ request: initialRequest }: { reque
     }
 
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
 
-    setRequest({ ...request, status: 'completed' })
-    setIsSubmitting(false)
-    toast.success('Service request completed!')
+    try {
+      const response = await fetch(`/api/service-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          completionNotes,
+          completedAt: new Date().toISOString(),
+          duration: elapsedMinutes,
+          beforePhotos,
+          afterPhotos,
+          materialsUsed: materialsUsed.map(m => ({
+            name: m.name,
+            quantity: m.quantity,
+            unit: m.unit,
+          })),
+        }),
+      })
 
-    setTimeout(() => {
-      router.push('/field/requests')
-    }, 1500)
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to complete request')
+      }
+
+      setRequest({ ...request, status: 'completed' })
+      toast.success('Service request completed!')
+
+      setTimeout(() => {
+        router.push('/field/requests')
+      }, 1500)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to complete request')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getPriorityColor = (priority: string) => {

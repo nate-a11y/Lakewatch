@@ -75,11 +75,35 @@ export default function NewPropertyClient({ customers }: NewPropertyClientProps)
 
     setIsSubmitting(true)
 
-    // TODO: Implement actual API call to create property
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zipCode,
+          accessInfo: {
+            code: formData.accessCode,
+            notes: formData.accessNotes,
+          },
+          notes: formData.notes,
+        }),
+      })
 
-    toast.success('Property created successfully')
-    router.push('/manage/properties')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create property')
+      }
+
+      toast.success('Property created successfully')
+      router.push('/manage/properties')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create property')
+      setIsSubmitting(false)
+    }
   }
 
   return (

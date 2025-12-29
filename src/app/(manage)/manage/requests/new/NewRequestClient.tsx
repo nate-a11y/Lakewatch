@@ -87,11 +87,31 @@ export default function NewRequestClient({
 
     setIsSubmitting(true)
 
-    // TODO: Implement actual API call to create service request
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/service-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: parseInt(formData.propertyId),
+          requestType: formData.type,
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          preferredDate: formData.scheduledDate || null,
+        }),
+      })
 
-    toast.success('Service request created successfully')
-    router.push('/manage/requests')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create service request')
+      }
+
+      toast.success('Service request created successfully')
+      router.push('/manage/requests')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create service request')
+      setIsSubmitting(false)
+    }
   }
 
   return (
