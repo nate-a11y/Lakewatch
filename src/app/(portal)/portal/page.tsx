@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { MobileQuickActionsFAB } from '@/components/portal/MobileQuickActionsFAB'
 import { WeatherWidget } from '@/components/portal/WeatherWidget'
+import { MiniCalendar } from '@/components/portal/MiniCalendar'
 import { getWeatherWithFallback } from '@/lib/weather'
 
 function getTimeOfDayGreeting(): string {
@@ -372,6 +373,19 @@ export default async function PortalDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Mini Calendar */}
+      <MiniCalendar
+        events={upcomingInspections.map((i) => {
+          const propData = i.property as unknown
+          const property = Array.isArray(propData) ? propData[0] : propData
+          return {
+            date: i.scheduled_date,
+            type: 'inspection' as const,
+            title: `Inspection at ${property?.name || 'property'}`,
+          }
+        })}
+      />
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Activity Feed */}

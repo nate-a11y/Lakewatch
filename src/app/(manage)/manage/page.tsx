@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Clock,
 } from 'lucide-react'
+import { LiveMapWidget } from '@/components/manage/LiveMapWidget'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
@@ -205,6 +206,21 @@ export default async function AdminDashboardPage() {
         </div>
         <p className="text-4xl font-bold text-[#4cbb17]">${stats.revenueThisMonth.toLocaleString()}</p>
       </div>
+
+      {/* Live Map Widget */}
+      <LiveMapWidget
+        inspections={todaySchedule.map((item, index) => ({
+          id: Number(item.id),
+          propertyName: item.property.split(' - ')[0],
+          address: item.property,
+          lat: 38.1 + (index * 0.05), // Placeholder coordinates
+          lng: -92.6 + (index * 0.05),
+          status: item.status as 'upcoming' | 'in_progress' | 'completed',
+          scheduledTime: item.time,
+          technicianName: item.technician,
+        }))}
+        className="mb-8"
+      />
 
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         {/* Today's Schedule */}
