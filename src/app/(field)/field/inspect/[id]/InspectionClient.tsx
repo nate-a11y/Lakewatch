@@ -25,6 +25,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { VoiceNoteButton } from '@/components/field/VoiceNoteButton'
+import { PreviousInspectionReference } from '@/components/field/PreviousInspectionReference'
 
 type ChecklistItemStatus = 'pass' | 'fail' | 'attention' | 'na' | null
 type IssueSeverity = 'low' | 'medium' | 'high' | 'critical'
@@ -46,6 +48,24 @@ interface ChecklistItem extends ChecklistItemData {
   followUpRequired?: boolean
 }
 
+interface PreviousIssueData {
+  id: string
+  title: string
+  severity: 'low' | 'medium' | 'high'
+  resolved: boolean
+  notes?: string
+}
+
+interface PreviousInspectionData {
+  id: string
+  date: string
+  technicianName: string
+  duration: number
+  issuesFound: number
+  issues: PreviousIssueData[]
+  overallNotes?: string
+}
+
 interface PropertyData {
   id: number
   name: string
@@ -65,6 +85,7 @@ interface PropertyData {
   }
   checklist: string
   previousIssues: { item: string; note: string; date: string }[]
+  previousInspection?: PreviousInspectionData
 }
 
 type InspectionStep = 'info' | 'checkin' | 'checklist' | 'summary' | 'checkout' | 'complete'
@@ -394,24 +415,25 @@ export default function InspectionClient({
           )}
         </section>
 
-        {/* Previous Issues */}
-        {property.previousIssues.length > 0 && (
-          <section className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-yellow-500">
-              <AlertTriangle className="w-5 h-5" />
-              Previous Issues to Follow Up
-            </h2>
-            <div className="space-y-2">
-              {property.previousIssues.map((issue, i) => (
-                <div key={i} className="p-3 bg-black/30 rounded-lg">
-                  <p className="font-medium text-sm">{issue.item}</p>
-                  <p className="text-xs text-[#a1a1aa]">{issue.note}</p>
-                  <p className="text-xs text-[#71717a] mt-1">{issue.date}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Previous Inspection Reference */}
+        <PreviousInspectionReference
+          inspection={property.previousInspection || (property.previousIssues.length > 0 ? {
+            id: 'prev-inspection',
+            date: property.previousIssues[0]?.date || new Date().toISOString(),
+            technicianName: 'Previous Technician',
+            duration: 45,
+            issuesFound: property.previousIssues.length,
+            issues: property.previousIssues.map((issue, i) => ({
+              id: `issue-${i}`,
+              title: issue.item,
+              severity: 'medium' as const,
+              resolved: false,
+              notes: issue.note,
+            })),
+          } : null)}
+          propertyName={property.name}
+          className="mb-6"
+        />
 
         {/* Start Button */}
         <button
@@ -777,14 +799,19 @@ export default function InspectionClient({
         )}
 
         <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-4 mb-6">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#4cbb17]" />
-            Summary Notes
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#4cbb17]" />
+              Summary Notes
+            </h2>
+            <VoiceNoteButton
+              onTranscript={(text) => setSummaryNotes((prev) => prev ? `${prev} ${text}` : text)}
+            />
+          </div>
           <textarea
             value={summaryNotes}
             onChange={(e) => setSummaryNotes(e.target.value)}
-            placeholder="Add any additional notes about the inspection..."
+            placeholder="Add any additional notes about the inspection... (or tap the mic to dictate)"
             rows={4}
             className="w-full px-3 py-2 bg-black/30 border border-[#27272a] rounded-lg text-sm focus:outline-none focus:border-[#4cbb17] resize-none"
           />

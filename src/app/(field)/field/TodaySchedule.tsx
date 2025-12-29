@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { WeatherAlertBanner } from '@/components/field/WeatherAlertBanner'
 
 interface ScheduleItem {
   id: string
@@ -134,6 +135,9 @@ export default function TodaySchedule({ initialItems, technicianName }: TodaySch
           </div>
         </div>
       </div>
+
+      {/* Weather Alerts */}
+      <WeatherAlertBanner className="mb-4" />
 
       {/* Route Overview Stats */}
       <div className="grid grid-cols-4 gap-2 mb-6">

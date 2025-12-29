@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import EditableNotes from '@/components/EditableNotes'
 import CustomerActionButtons from './CustomerActionButtons'
+import { CustomerHealthScore } from '@/components/manage/CustomerHealthScore'
+import { InternalNotesTab } from '@/components/manage/InternalNotesTab'
 
 export default async function CustomerDetailPage({
   params,
@@ -61,6 +63,22 @@ export default async function CustomerDetailPage({
     .in('property_id', properties?.map(p => p.id) || [0])
     .order('scheduled_date', { ascending: false })
     .limit(3)
+
+  // Fetch data for customer health score
+  const [allInvoicesResult, messagesResult, requestsResult] = await Promise.all([
+    supabase.from('lwp_invoices').select('id, status').eq('customer_id', id),
+    supabase.from('lwp_messages').select('id', { count: 'exact' }).eq('customer_id', id),
+    supabase.from('lwp_service_requests').select('id', { count: 'exact' }).eq('requested_by_id', id),
+  ])
+
+  const allInvoices = allInvoicesResult.data || []
+  const paidOnTime = allInvoices.filter(i => i.status === 'paid').length
+  const paidLate = allInvoices.filter(i => i.status === 'overdue').length
+
+  // Calculate tenure in months
+  const tenureMonths = Math.max(1, Math.floor(
+    (new Date().getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
+  ))
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -223,6 +241,20 @@ export default async function CustomerDetailPage({
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Customer Health Score */}
+          <CustomerHealthScore
+            paymentHistory={{
+              onTime: paidOnTime,
+              late: paidLate,
+              total: allInvoices.length,
+            }}
+            engagement={{
+              messages: messagesResult.count || 0,
+              requests: requestsResult.count || 0,
+            }}
+            tenureMonths={tenureMonths}
+          />
+
           {/* Billing Summary */}
           <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Billing Summary</h2>
@@ -250,11 +282,11 @@ export default async function CustomerDetailPage({
             </Link>
           </section>
 
-          {/* Notes - using EditableNotes component */}
-          <EditableNotes
-            initialNotes=""
-            title="Notes"
-            placeholder="Add customer notes..."
+          {/* Internal Notes with Tags */}
+          <InternalNotesTab
+            customerId={id}
+            initialNotes={[]}
+            customerTags={[]}
           />
 
           {/* Recent Activity */}

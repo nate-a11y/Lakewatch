@@ -2,16 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   Plus,
-  ClipboardList,
-  Building2,
-  User,
-  ChevronRight,
   AlertTriangle,
   Clock,
-  CheckCircle,
-  XCircle,
 } from 'lucide-react'
 import RequestFilters from './RequestFilters'
+import RequestsClient from './RequestsClient'
 
 export default async function RequestsPage() {
   const supabase = await createClient()
@@ -38,6 +33,8 @@ export default async function RequestsPage() {
     })
   }
 
+  const now = new Date().getTime()
+
   const requestsList = (requests || []).map((r) => {
     const propertyData = r.property as { id: number; name: string } | { id: number; name: string }[] | null
     const property = Array.isArray(propertyData) ? propertyData[0] : propertyData
@@ -47,6 +44,10 @@ export default async function RequestsPage() {
 
     const assignedData = r.assigned_to as { id: number; first_name: string; last_name: string } | { id: number; first_name: string; last_name: string }[] | null
     const assignedTo = Array.isArray(assignedData) ? assignedData[0] : assignedData
+
+    // Calculate hours since request was created for SLA tracking
+    const createdTime = new Date(r.created_at).getTime()
+    const hoursSinceCreated = Math.floor((now - createdTime) / (1000 * 60 * 60))
 
     return {
       id: r.id,
@@ -69,8 +70,15 @@ export default async function RequestsPage() {
       category: r.request_type || 'General',
       createdAt: formatDate(r.created_at),
       scheduledFor: r.scheduled_date ? formatDate(r.scheduled_date) : null,
+      hoursSinceCreated, // For SLA tracking
     }
   })
+
+  // Calculate average response time for pending requests
+  const pendingRequests = requestsList.filter(r => r.status === 'pending')
+  const avgResponseTime = pendingRequests.length > 0
+    ? Math.round(pendingRequests.reduce((sum, r) => sum + r.hoursSinceCreated, 0) / pendingRequests.length)
+    : 0
 
   const stats = {
     open: requestsList.filter(r => r.status === 'pending').length,
@@ -79,47 +87,29 @@ export default async function RequestsPage() {
     urgent: requestsList.filter(r => r.priority === 'urgent' && r.status !== 'completed').length,
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-500/10 text-red-500 border-red-500/20'
-      case 'high':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-      case 'medium':
-      case 'normal':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-      default:
-        return 'bg-[#27272a] text-[#a1a1aa] border-[#27272a]'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'in_progress':
-        return <Clock className="w-4 h-4 text-yellow-500" />
-      case 'scheduled':
-        return <Clock className="w-4 h-4 text-blue-500" />
-      case 'cancelled':
-        return <XCircle className="w-4 h-4 text-[#71717a]" />
-      default:
-        return <AlertTriangle className="w-4 h-4 text-[#71717a]" />
-    }
-  }
-
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Service Requests</h1>
-          <p className="text-[#a1a1aa]">
-            Manage customer service requests and work orders ({requestsList.length} total)
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-[#a1a1aa]">
+              Manage customer service requests and work orders ({requestsList.length} total)
+            </p>
+            {avgResponseTime > 0 && (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                avgResponseTime < 24 ? 'bg-green-500/10 text-green-500' :
+                avgResponseTime < 48 ? 'bg-yellow-500/10 text-yellow-500' :
+                'bg-red-500/10 text-red-500'
+              }`}>
+                Avg Response: {avgResponseTime < 24 ? `${avgResponseTime}h` : `${Math.round(avgResponseTime / 24)}d`}
+              </span>
+            )}
+          </div>
         </div>
         <Link
           href="/manage/requests/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors min-h-[44px]"
         >
           <Plus className="w-5 h-5" />
           New Request
@@ -160,69 +150,7 @@ export default async function RequestsPage() {
 
       <RequestFilters />
 
-      {/* Requests List */}
-      <div className="space-y-3">
-        {requestsList.map((request) => (
-          <Link
-            key={request.id}
-            href={`/manage/requests/${request.id}`}
-            className="block bg-[#0f0f0f] border border-[#27272a] rounded-xl p-4 hover:border-[#4cbb17]/50 transition-colors"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-3 mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded border ${getPriorityColor(request.priority)}`}>
-                    {request.priority}
-                  </span>
-                  <span className="text-xs text-[#71717a]">{request.category}</span>
-                </div>
-                <h3 className="font-semibold mb-1">{request.title}</h3>
-                <p className="text-sm text-[#71717a] line-clamp-1 mb-2">{request.description}</p>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-[#71717a]">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-4 h-4" />
-                    {request.property.name}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {request.customer.name}
-                  </span>
-                  <span className="text-xs">{request.createdAt}</span>
-                </div>
-              </div>
-              <div className="flex sm:flex-col items-center sm:items-end gap-3">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(request.status)}
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    request.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                    request.status === 'in_progress' ? 'bg-yellow-500/10 text-yellow-500' :
-                    request.status === 'scheduled' ? 'bg-blue-500/10 text-blue-400' :
-                    request.status === 'cancelled' ? 'bg-[#27272a] text-[#71717a]' :
-                    'bg-[#27272a] text-[#a1a1aa]'
-                  }`}>
-                    {request.status.replace('_', ' ')}
-                  </span>
-                </div>
-                {request.assignedTo ? (
-                  <span className="text-xs text-[#71717a]">
-                    Assigned: {request.assignedTo.name}
-                  </span>
-                ) : (
-                  <span className="text-xs text-yellow-500">Unassigned</span>
-                )}
-                <ChevronRight className="w-5 h-5 text-[#71717a] hidden sm:block" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {requestsList.length === 0 && (
-        <div className="text-center py-12 bg-[#0f0f0f] border border-[#27272a] rounded-xl">
-          <ClipboardList className="w-12 h-12 text-[#27272a] mx-auto mb-4" />
-          <p className="text-[#71717a]">No service requests found</p>
-        </div>
-      )}
+      <RequestsClient requests={requestsList} />
     </div>
   )
 }
