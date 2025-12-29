@@ -10,18 +10,20 @@ import {
   Wrench,
   Calendar,
   Check,
-  X,
+  FileText,
+  CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 interface Notification {
-  id: string
-  type: 'alert' | 'message' | 'inspection' | 'service' | 'reminder'
+  id: number
+  notification_type: string
   title: string
-  description: string
-  time: string
-  read: boolean
-  link?: string
+  message: string | null
+  link: string | null
+  read_at: string | null
+  created_at: string
 }
 
 interface NotificationsDropdownProps {
@@ -30,102 +32,60 @@ interface NotificationsDropdownProps {
 
 export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Mock notifications based on portal type
-  const [notifications, setNotifications] = useState<Notification[]>(() => {
-    if (portal === 'admin') {
-      return [
-        {
-          id: '1',
-          type: 'alert',
-          title: 'Overdue Invoice',
-          description: 'Johnson property - $450 overdue by 5 days',
-          time: '10 min ago',
-          read: false,
-          link: '/manage/invoices',
-        },
-        {
-          id: '2',
-          type: 'service',
-          title: 'New Service Request',
-          description: 'Lake House - Emergency HVAC repair needed',
-          time: '1 hour ago',
-          read: false,
-          link: '/manage/requests',
-        },
-        {
-          id: '3',
-          type: 'inspection',
-          title: 'Inspection Completed',
-          description: 'Guest Cabin inspection by Mike T.',
-          time: '2 hours ago',
-          read: true,
-          link: '/manage/inspections',
-        },
-      ]
-    } else if (portal === 'field') {
-      return [
-        {
-          id: '1',
-          type: 'reminder',
-          title: 'Upcoming Inspection',
-          description: 'Sunset Cove at 2:00 PM today',
-          time: '30 min',
-          read: false,
-          link: '/field',
-        },
-        {
-          id: '2',
-          type: 'service',
-          title: 'New Service Assigned',
-          description: 'Gutter cleaning at Lake House',
-          time: '1 hour ago',
-          read: false,
-          link: '/field/requests',
-        },
-        {
-          id: '3',
-          type: 'message',
-          title: 'Message from Admin',
-          description: 'Updated access code for Marina View',
-          time: '3 hours ago',
-          read: true,
-        },
-      ]
-    } else {
-      return [
-        {
-          id: '1',
-          type: 'inspection',
-          title: 'Inspection Complete',
-          description: 'Your Lake House inspection is ready to view',
-          time: '2 hours ago',
-          read: false,
-          link: '/portal/reports',
-        },
-        {
-          id: '2',
-          type: 'message',
-          title: 'New Message',
-          description: 'Response from Lake Watch Pros support',
-          time: '1 day ago',
-          read: false,
-          link: '/portal/messages',
-        },
-        {
-          id: '3',
-          type: 'reminder',
-          title: 'Upcoming Inspection',
-          description: 'Guest Cabin scheduled for Dec 30',
-          time: '2 days ago',
-          read: true,
-        },
-      ]
-    }
-  })
+  const unreadCount = notifications.filter(n => !n.read_at).length
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  // Fetch notifications on mount
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const supabase = createClient()
+
+      const { data, error } = await supabase
+        .from('lwp_notifications')
+        .select('id, notification_type, title, message, link, read_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (!error && data) {
+        setNotifications(data)
+      }
+      setLoading(false)
+    }
+
+    fetchNotifications()
+
+    // Set up real-time subscription
+    const supabase = createClient()
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lwp_notifications',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setNotifications(prev => [payload.new as Notification, ...prev].slice(0, 10))
+          } else if (payload.eventType === 'UPDATE') {
+            setNotifications(prev =>
+              prev.map(n => n.id === (payload.new as Notification).id ? payload.new as Notification : n)
+            )
+          } else if (payload.eventType === 'DELETE') {
+            setNotifications(prev => prev.filter(n => n.id !== (payload.old as { id: number }).id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -138,35 +98,89 @@ export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const markAsRead = (id: string, e: React.MouseEvent) => {
+  const markAsRead = async (id: number, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
+    const supabase = createClient()
+    await supabase
+      .from('lwp_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', id)
+
     setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
+      n.id === id ? { ...n, read_at: new Date().toISOString() } : n
     ))
   }
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })))
+  const markAllAsRead = async () => {
+    const supabase = createClient()
+    const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id)
+
+    if (unreadIds.length > 0) {
+      await supabase
+        .from('lwp_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds)
+
+      setNotifications(notifications.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })))
+    }
   }
 
-  const getIcon = (type: Notification['type']) => {
+  const getIcon = (type: string) => {
     switch (type) {
       case 'alert':
+      case 'issue_found':
         return <AlertTriangle className="w-4 h-4 text-red-500" />
       case 'message':
         return <MessageSquare className="w-4 h-4 text-blue-500" />
-      case 'inspection':
+      case 'inspection_scheduled':
+      case 'inspection_complete':
         return <ClipboardCheck className="w-4 h-4 text-[#4cbb17]" />
-      case 'service':
+      case 'service_request':
+      case 'service_assigned':
         return <Wrench className="w-4 h-4 text-yellow-500" />
       case 'reminder':
         return <Calendar className="w-4 h-4 text-purple-500" />
+      case 'invoice':
+      case 'payment':
+        return <CreditCard className="w-4 h-4 text-green-500" />
+      case 'document':
+        return <FileText className="w-4 h-4 text-orange-500" />
+      default:
+        return <Bell className="w-4 h-4 text-[#71717a]" />
     }
+  }
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   const notificationsLink = portal === 'admin' ? '/manage/notifications' :
     portal === 'field' ? '/field/notifications' : '/portal/notifications'
+
+  // Get the appropriate link prefix based on portal
+  const getLinkWithPortal = (link: string | null) => {
+    if (!link) return '#'
+    // If link already starts with the portal prefix, use as-is
+    if (link.startsWith('/manage') || link.startsWith('/field') || link.startsWith('/portal')) {
+      return link
+    }
+    // Otherwise, prepend the appropriate prefix
+    const prefix = portal === 'admin' ? '/manage' : portal === 'field' ? '/field' : '/portal'
+    return `${prefix}${link}`
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -204,36 +218,47 @@ export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
 
           {/* Notifications List */}
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length > 0 ? (
+            {loading ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-[#71717a]">Loading...</p>
+              </div>
+            ) : notifications.length > 0 ? (
               notifications.map(notification => (
                 <Link
                   key={notification.id}
-                  href={notification.link || '#'}
+                  href={getLinkWithPortal(notification.link)}
                   onClick={() => {
-                    if (!notification.read) {
-                      setNotifications(notifications.map(n =>
-                        n.id === notification.id ? { ...n, read: true } : n
-                      ))
+                    if (!notification.read_at) {
+                      const supabase = createClient()
+                      supabase
+                        .from('lwp_notifications')
+                        .update({ read_at: new Date().toISOString() })
+                        .eq('id', notification.id)
+                        .then(() => {
+                          setNotifications(notifications.map(n =>
+                            n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n
+                          ))
+                        })
                     }
                     setOpen(false)
                   }}
                   className={cn(
                     "flex gap-3 px-4 py-3 hover:bg-[#27272a] transition-colors border-b border-[#27272a] last:border-0",
-                    !notification.read && "bg-[#4cbb17]/5"
+                    !notification.read_at && "bg-[#4cbb17]/5"
                   )}
                 >
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#27272a] flex items-center justify-center">
-                    {getIcon(notification.type)}
+                    {getIcon(notification.notification_type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={cn(
                         "text-sm truncate",
-                        !notification.read && "font-medium"
+                        !notification.read_at && "font-medium"
                       )}>
                         {notification.title}
                       </p>
-                      {!notification.read && (
+                      {!notification.read_at && (
                         <button
                           onClick={(e) => markAsRead(notification.id, e)}
                           className="flex-shrink-0 p-1 hover:bg-[#3f3f46] rounded transition-colors"
@@ -243,11 +268,13 @@ export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
                         </button>
                       )}
                     </div>
-                    <p className="text-xs text-[#71717a] truncate">
-                      {notification.description}
-                    </p>
+                    {notification.message && (
+                      <p className="text-xs text-[#71717a] truncate">
+                        {notification.message}
+                      </p>
+                    )}
                     <p className="text-xs text-[#4f4f4f] mt-1">
-                      {notification.time}
+                      {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </Link>

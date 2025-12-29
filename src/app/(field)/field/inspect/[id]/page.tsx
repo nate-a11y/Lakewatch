@@ -131,23 +131,11 @@ export default async function InspectionPage({
     requiresPhoto: item.requires_photo,
   }))
 
-  // If no checklist items from database, use default
-  const defaultItems = formattedChecklistItems.length > 0 ? formattedChecklistItems : [
-    { id: '1', category: 'Exterior', name: 'Check front door and locks', required: true, requiresPhoto: false },
-    { id: '2', category: 'Exterior', name: 'Check back door and locks', required: true, requiresPhoto: false },
-    { id: '3', category: 'Exterior', name: 'Inspect windows for damage', required: true, requiresPhoto: true },
-    { id: '4', category: 'Interior', name: 'Check HVAC operation', required: true, requiresPhoto: false },
-    { id: '5', category: 'Interior', name: 'Check water heater', required: true, requiresPhoto: false },
-    { id: '6', category: 'Interior', name: 'Inspect for water leaks', required: true, requiresPhoto: true },
-    { id: '7', category: 'Systems', name: 'Test smoke detectors', required: true, requiresPhoto: false },
-    { id: '8', category: 'Systems', name: 'Test CO detectors', required: true, requiresPhoto: false },
-  ]
-
   return (
     <InspectionClient
       inspectionId={inspection.id}
       property={formattedProperty}
-      checklistItems={defaultItems}
+      checklistItems={formattedChecklistItems}
     />
   )
 }
