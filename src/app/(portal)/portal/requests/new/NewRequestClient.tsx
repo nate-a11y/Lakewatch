@@ -16,6 +16,7 @@ import {
   CloudRain,
   Sparkles,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Property {
   id: string
@@ -81,9 +82,32 @@ export default function NewRequestClient({ properties }: { properties: Property[
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    // TODO: Implement actual submission
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    router.push('/portal/requests?success=true')
+
+    try {
+      const response = await fetch('/api/service-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: parseInt(selectedProperty),
+          requestType: selectedType,
+          title: selectedTypeData?.name || 'Service Request',
+          description,
+          priority,
+          preferredDate: preferredDate || null,
+          preferredTimeStart: preferredTime || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to submit request')
+      }
+
+      router.push('/portal/requests?success=true')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to submit request')
+      setIsSubmitting(false)
+    }
   }
 
   const selectedTypeData = REQUEST_TYPES.find(t => t.id === selectedType)

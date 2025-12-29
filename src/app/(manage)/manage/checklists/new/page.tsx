@@ -80,11 +80,29 @@ export default function NewChecklistPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/checklists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          planType: formData.plan,
+          items: items.filter(item => item.text.trim()),
+        }),
+      })
 
-    toast.success('Checklist created successfully')
-    router.push('/manage/checklists')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create checklist')
+      }
+
+      toast.success('Checklist created successfully')
+      router.push('/manage/checklists')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create checklist')
+      setIsSubmitting(false)
+    }
   }
 
   const getPlanColor = (plan: string) => {

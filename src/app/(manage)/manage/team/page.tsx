@@ -38,25 +38,86 @@ export default async function TeamPage() {
     console.error('Error fetching team:', error)
   }
 
-  // Get property assignments for technicians
+  // Get technician IDs for stats query
   const technicianIds = (teamMembers || [])
     .filter(m => m.role === 'technician')
     .map(m => m.id)
 
-  // For now, we'll show 0 for assigned properties and inspections
-  // In a real app, you'd have a proper assignment table
-  const membersWithStats: TeamMember[] = (teamMembers || []).map(m => ({
-    id: m.id,
-    first_name: m.first_name || '',
-    last_name: m.last_name || '',
-    email: m.email,
-    phone: m.phone,
-    role: m.role as 'owner' | 'admin' | 'technician',
-    status: m.status || 'active',
-    created_at: m.created_at,
-    assigned_properties: 0, // TODO: Get from assignments table
-    completed_inspections: 0, // TODO: Get from inspections table
-  }))
+  // Get inspection counts per technician
+  let inspectionCounts: { technician_id: number; count: number }[] = []
+  if (technicianIds.length > 0) {
+    const { data: inspections } = await supabase
+      .from('lwp_inspections')
+      .select('technician_id')
+      .in('technician_id', technicianIds)
+      .eq('status', 'completed')
+
+    // Count inspections per technician
+    const countMap = new Map<number, number>()
+    inspections?.forEach(insp => {
+      countMap.set(insp.technician_id, (countMap.get(insp.technician_id) || 0) + 1)
+    })
+    inspectionCounts = Array.from(countMap, ([technician_id, count]) => ({ technician_id, count }))
+  }
+
+  // Get service request counts per technician
+  let requestCounts: { assigned_to_id: number; count: number }[] = []
+  if (technicianIds.length > 0) {
+    const { data: requests } = await supabase
+      .from('lwp_service_requests')
+      .select('assigned_to_id')
+      .in('assigned_to_id', technicianIds)
+      .eq('status', 'completed')
+
+    const countMap = new Map<number, number>()
+    requests?.forEach(req => {
+      if (req.assigned_to_id) {
+        countMap.set(req.assigned_to_id, (countMap.get(req.assigned_to_id) || 0) + 1)
+      }
+    })
+    requestCounts = Array.from(countMap, ([assigned_to_id, count]) => ({ assigned_to_id, count }))
+  }
+
+  // Get active inspection/request assignments
+  let activeAssignments: { technician_id: number; count: number }[] = []
+  if (technicianIds.length > 0) {
+    const { data: activeInspections } = await supabase
+      .from('lwp_inspections')
+      .select('technician_id, property_id')
+      .in('technician_id', technicianIds)
+      .in('status', ['scheduled', 'in_progress'])
+
+    const assignmentMap = new Map<number, Set<number>>()
+    activeInspections?.forEach(insp => {
+      if (!assignmentMap.has(insp.technician_id)) {
+        assignmentMap.set(insp.technician_id, new Set())
+      }
+      assignmentMap.get(insp.technician_id)?.add(insp.property_id)
+    })
+    activeAssignments = Array.from(assignmentMap, ([technician_id, properties]) => ({
+      technician_id,
+      count: properties.size,
+    }))
+  }
+
+  const membersWithStats: TeamMember[] = (teamMembers || []).map(m => {
+    const inspections = inspectionCounts.find(i => i.technician_id === m.id)?.count || 0
+    const requests = requestCounts.find(r => r.assigned_to_id === m.id)?.count || 0
+    const assignments = activeAssignments.find(a => a.technician_id === m.id)?.count || 0
+
+    return {
+      id: m.id,
+      first_name: m.first_name || '',
+      last_name: m.last_name || '',
+      email: m.email,
+      phone: m.phone,
+      role: m.role as 'owner' | 'admin' | 'technician',
+      status: m.status || 'active',
+      created_at: m.created_at,
+      assigned_properties: assignments,
+      completed_inspections: inspections + requests,
+    }
+  })
 
   const getRoleBadge = (role: string) => {
     switch (role) {

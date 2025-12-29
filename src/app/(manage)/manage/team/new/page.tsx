@@ -47,14 +47,34 @@ export default function NewTeamMemberPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          sendInvite: formData.sendInvite,
+        }),
+      })
 
-    toast.success('Team member added successfully')
-    if (formData.sendInvite) {
-      toast.success('Invitation email sent')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to add team member')
+      }
+
+      toast.success('Team member added successfully')
+      if (formData.sendInvite) {
+        toast.success('Invitation email sent')
+      }
+      router.push('/manage/team')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add team member')
+      setIsSubmitting(false)
     }
-    router.push('/manage/team')
   }
 
   return (

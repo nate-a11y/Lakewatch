@@ -52,11 +52,35 @@ export default function AddPropertyPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zipCode,
+          accessInfo: {
+            code: formData.accessCode,
+            notes: formData.accessNotes,
+          },
+          notes: formData.notes,
+        }),
+      })
 
-    toast.success('Property added! Our team will review and set up your service plan.')
-    router.push('/portal/properties')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to add property')
+      }
+
+      toast.success('Property added! Our team will review and set up your service plan.')
+      router.push('/portal/properties')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add property')
+      setIsSubmitting(false)
+    }
   }
 
   return (

@@ -163,12 +163,38 @@ export default function InspectionClient({
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setCheckedIn(true)
-    setCheckInTime(new Date())
-    setIsCheckingIn(false)
-    toast.success('Checked in successfully', { description: 'Location verified' })
-    setStep('checklist')
+
+    try {
+      const response = await fetch(`/api/inspections/${inspectionId}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+        }),
+      })
+
+      if (!response.ok && !isOffline) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to check in')
+      }
+
+      setCheckedIn(true)
+      setCheckInTime(new Date())
+      toast.success('Checked in successfully', { description: 'Location verified' })
+      setStep('checklist')
+    } catch (error) {
+      if (isOffline) {
+        // Allow offline check-in
+        setCheckedIn(true)
+        setCheckInTime(new Date())
+        toast.success('Checked in (offline)', { description: 'Will sync when online' })
+        setStep('checklist')
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to check in')
+      }
+    } finally {
+      setIsCheckingIn(false)
+    }
   }
 
   const handleCheckOut = async () => {
@@ -178,20 +204,70 @@ export default function InspectionClient({
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 2000))
 
-    if (isOffline) {
-      toast.success('Inspection saved offline', {
-        description: 'Will sync when back online',
+    try {
+      const responses = checklistItems.map(item => ({
+        checklistItemId: parseInt(item.id) || null,
+        category: item.category,
+        item: item.name,
+        response: item.status || 'na',
+        notes: item.notes || null,
+        photoIds: item.photos.length > 0 ? item.photos : null,
+      }))
+
+      const issues = checklistItems
+        .filter(item => item.status === 'fail' || item.status === 'attention')
+        .map(item => ({
+          title: item.name,
+          description: item.notes || `Issue found with ${item.name}`,
+          severity: item.severity || 'medium',
+          category: item.category,
+        }))
+
+      const response = await fetch(`/api/inspections/${inspectionId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          responses,
+          issues,
+          summary: summaryNotes,
+          overallStatus: issues.some(i => i.severity === 'critical' || i.severity === 'high')
+            ? 'urgent'
+            : issues.length > 0
+            ? 'issues_found'
+            : 'all_clear',
+        }),
       })
-    } else {
-      toast.success('Inspection submitted', {
-        description: 'Report sent to customer',
-      })
+
+      if (!response.ok && !isOffline) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to submit inspection')
+      }
+
+      if (isOffline) {
+        toast.success('Inspection saved offline', {
+          description: 'Will sync when back online',
+        })
+      } else {
+        toast.success('Inspection submitted', {
+          description: 'Report sent to customer',
+        })
+      }
+
+      setStep('checkout')
+    } catch (error) {
+      if (isOffline) {
+        // Store locally for later sync
+        toast.success('Inspection saved offline', {
+          description: 'Will sync when back online',
+        })
+        setStep('checkout')
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to submit inspection')
+      }
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setStep('checkout')
-    setIsSubmitting(false)
   }
 
   const handleAddPhoto = (itemId: string) => {

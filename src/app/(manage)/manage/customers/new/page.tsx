@@ -40,11 +40,31 @@ export default function NewCustomerPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          notes: formData.notes,
+          sendInvite: true,
+        }),
+      })
 
-    toast.success('Customer created successfully')
-    router.push('/manage/customers')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create customer')
+      }
+
+      toast.success('Customer created successfully')
+      router.push('/manage/customers')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create customer')
+      setIsSubmitting(false)
+    }
   }
 
   return (

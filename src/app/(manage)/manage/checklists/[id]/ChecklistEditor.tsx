@@ -85,11 +85,28 @@ export default function ChecklistEditor({ checklist }: { checklist: Checklist })
 
     setIsSaving(true)
 
-    // TODO: Implement actual save to database
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch(`/api/checklists/${checklist.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          description,
+          items: items.filter(item => item.text.trim()),
+        }),
+      })
 
-    toast.success('Checklist saved successfully')
-    setIsSaving(false)
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save checklist')
+      }
+
+      toast.success('Checklist saved successfully')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save checklist')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
