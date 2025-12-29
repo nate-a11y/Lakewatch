@@ -44,37 +44,8 @@
 -- ============================================
 -- STORAGE POLICIES
 -- ============================================
-
--- Helper function to check if user owns the property related to an inspection
-CREATE OR REPLACE FUNCTION storage.lwp_owns_inspection_property(inspection_path TEXT)
-RETURNS BOOLEAN AS $$
-DECLARE
-  v_inspection_id INTEGER;
-  v_property_owner_id INTEGER;
-  v_user_id INTEGER;
-BEGIN
-  -- Extract inspection ID from path (format: inspections/{inspection_id}/...)
-  v_inspection_id := (regexp_match(inspection_path, 'inspections/(\d+)/'))[1]::INTEGER;
-
-  IF v_inspection_id IS NULL THEN
-    RETURN FALSE;
-  END IF;
-
-  -- Get the property owner for this inspection
-  SELECT p.owner_id INTO v_property_owner_id
-  FROM lwp_inspections i
-  JOIN lwp_properties p ON i.property_id = p.id
-  WHERE i.id = v_inspection_id;
-
-  -- Get current user ID
-  SELECT id INTO v_user_id FROM lwp_users WHERE supabase_id = auth.uid();
-
-  RETURN v_property_owner_id = v_user_id;
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN FALSE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Note: Uses lwp_is_staff() and lwp_get_user_id() from public schema
+-- (defined in earlier migrations)
 
 -- ============================================
 -- INSPECTION PHOTOS POLICIES
