@@ -14,6 +14,7 @@ import {
   Check,
   X,
   AlertCircle,
+  MessageCircle,
 } from 'lucide-react'
 import DownloadPDFButton from './DownloadPDFButton'
 import ReportPhotoGallery from './ReportPhotoGallery'
@@ -255,6 +256,13 @@ export default async function ReportDetailPage({
                         <strong>Action taken:</strong> {issue.action_taken}
                       </p>
                     )}
+                    <Link
+                      href={`/portal/messages/new?subject=${encodeURIComponent(`Question about ${report.property.name} inspection on ${report.date}`)}&body=${encodeURIComponent(`I have a question about the issue: "${issue.description}"\n\n`)}`}
+                      className="inline-flex items-center gap-1.5 mt-3 text-sm text-[#4cbb17] hover:underline"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Ask About This
+                    </Link>
                   </div>
                 </div>
               </div>

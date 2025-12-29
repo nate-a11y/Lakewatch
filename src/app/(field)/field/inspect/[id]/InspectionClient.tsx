@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { VoiceNoteButton } from '@/components/field/VoiceNoteButton'
 import { PreviousInspectionReference } from '@/components/field/PreviousInspectionReference'
+import { PhotoAnnotator } from '@/components/field/PhotoAnnotator'
 
 type ChecklistItemStatus = 'pass' | 'fail' | 'attention' | 'na' | null
 type IssueSeverity = 'low' | 'medium' | 'high' | 'critical'
@@ -114,6 +115,7 @@ export default function InspectionClient({
     typeof window !== 'undefined' ? !navigator.onLine : false
   )
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
+  const [annotatingPhoto, setAnnotatingPhoto] = useState<{ itemId: string; photoIndex: number } | null>(null)
 
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(
     initialItems.map(item => ({
@@ -639,9 +641,20 @@ export default function InspectionClient({
                                   Photos {item.requiresPhoto && <span className="text-red-500">*</span>}
                                 </label>
                                 <div className="flex gap-2 flex-wrap">
-                                  {item.photos.map((_, idx) => (
-                                    <div key={idx} className="w-16 h-16 bg-[#27272a] rounded-lg flex items-center justify-center relative">
+                                  {item.photos.map((photo, idx) => (
+                                    <div key={idx} className="w-16 h-16 bg-[#27272a] rounded-lg flex items-center justify-center relative group">
                                       <Camera className="w-6 h-6 text-[#71717a]" />
+                                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                        <button
+                                          onClick={() => setAnnotatingPhoto({ itemId: item.id, photoIndex: idx })}
+                                          className="p-1 text-[#4cbb17]"
+                                          title="Annotate photo"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                        </button>
+                                      </div>
                                       <button
                                         onClick={() => updateItemField(item.id, 'photos', item.photos.filter((__, i) => i !== idx))}
                                         className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
@@ -712,6 +725,24 @@ export default function InspectionClient({
               : 'Review & Submit'}
           </button>
         </div>
+
+        {/* Photo Annotator Modal */}
+        {annotatingPhoto && (
+          <PhotoAnnotator
+            imageUrl={checklistItems.find(i => i.id === annotatingPhoto.itemId)?.photos[annotatingPhoto.photoIndex] || '/placeholder-photo.jpg'}
+            onSave={(annotatedUrl) => {
+              const item = checklistItems.find(i => i.id === annotatingPhoto.itemId)
+              if (item) {
+                const newPhotos = [...item.photos]
+                newPhotos[annotatingPhoto.photoIndex] = annotatedUrl
+                updateItemField(annotatingPhoto.itemId, 'photos', newPhotos)
+              }
+              setAnnotatingPhoto(null)
+              toast.success('Photo annotated!')
+            }}
+            onCancel={() => setAnnotatingPhoto(null)}
+          />
+        )}
       </div>
     )
   }
