@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { addOccupancyEvent } from '@/actions/calendar'
+import { CalendarExport } from '@/components/portal/CalendarExport'
 
 interface CalendarEvent {
   id: string
@@ -144,13 +145,24 @@ export default function CalendarView({ initialEvents, properties }: CalendarView
             View inspections and manage occupancy
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Occupancy
-        </button>
+        <div className="flex items-center gap-3">
+          <CalendarExport
+            events={events.map(e => ({
+              id: e.id,
+              title: `${e.type === 'inspection' ? 'Inspection' : e.label || 'Occupancy'} - ${e.property}`,
+              description: e.label ? `${e.label} at ${e.property}` : `${e.type} event at ${e.property}`,
+              startDate: new Date(e.date).toISOString(),
+              location: e.property,
+            }))}
+          />
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#4cbb17] text-black font-semibold rounded-lg hover:bg-[#60e421] transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add Occupancy
+          </button>
+        </div>
       </div>
 
       {/* Calendar */}

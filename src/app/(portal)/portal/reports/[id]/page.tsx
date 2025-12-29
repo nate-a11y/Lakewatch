@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import DownloadPDFButton from './DownloadPDFButton'
 import ReportPhotoGallery from './ReportPhotoGallery'
+import { GPSVerificationBadge } from '@/components/portal/GPSVerificationBadge'
 
 export default async function ReportDetailPage({
   params,
@@ -189,6 +190,19 @@ export default async function ReportDetailPage({
             </div>
           )}
         </div>
+
+        {/* GPS Verification */}
+        <GPSVerificationBadge
+          verified={!!inspection.check_in_time && !!inspection.check_out_time}
+          checkInTime={inspection.check_in_time}
+          checkOutTime={inspection.check_out_time}
+          location={inspection.gps_location ? {
+            lat: inspection.gps_location.lat,
+            lng: inspection.gps_location.lng,
+            address: report.property.address,
+          } : undefined}
+          className="mt-4"
+        />
       </div>
 
       {/* Summary */}
