@@ -1,74 +1,45 @@
 -- Migration 005: Supabase Storage Buckets
--- Run this in the Supabase SQL Editor
+-- Run this in the Supabase SQL Editor AFTER creating buckets in Dashboard
 
 -- ============================================
--- CREATE STORAGE BUCKETS
+-- STEP 1: CREATE BUCKETS VIA SUPABASE DASHBOARD
 -- ============================================
-
--- Inspection photos bucket (public)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'inspection-photos',
-  'inspection-photos',
-  true,
-  5242880, -- 5MB
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-) ON CONFLICT (id) DO UPDATE SET
-  public = EXCLUDED.public,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- Service request photos bucket (public)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'service-request-photos',
-  'service-request-photos',
-  true,
-  5242880, -- 5MB
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-) ON CONFLICT (id) DO UPDATE SET
-  public = EXCLUDED.public,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- Property photos bucket (public)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'property-photos',
-  'property-photos',
-  true,
-  10485760, -- 10MB
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-) ON CONFLICT (id) DO UPDATE SET
-  public = EXCLUDED.public,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- Documents bucket (private - requires signed URLs)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'documents',
-  'documents',
-  false,
-  20971520, -- 20MB
-  ARRAY['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-) ON CONFLICT (id) DO UPDATE SET
-  public = EXCLUDED.public,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- Avatars bucket (public)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'avatars',
-  'avatars',
-  true,
-  2097152, -- 2MB
-  ARRAY['image/jpeg', 'image/png', 'image/webp']
-) ON CONFLICT (id) DO UPDATE SET
-  public = EXCLUDED.public,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
+-- Go to: Supabase Dashboard → Storage → New Bucket
+--
+-- Create these 5 buckets with the following settings:
+--
+-- 1. inspection-photos
+--    - Public: YES
+--    - File size limit: 5MB
+--    - Allowed MIME types: image/jpeg, image/png, image/webp, image/heic
+--
+-- 2. service-request-photos
+--    - Public: YES
+--    - File size limit: 5MB
+--    - Allowed MIME types: image/jpeg, image/png, image/webp, image/heic
+--
+-- 3. property-photos
+--    - Public: YES
+--    - File size limit: 10MB
+--    - Allowed MIME types: image/jpeg, image/png, image/webp, image/heic
+--
+-- 4. documents
+--    - Public: NO (private - uses signed URLs)
+--    - File size limit: 20MB
+--    - Allowed MIME types: application/pdf, image/jpeg, image/png,
+--                          application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document
+--
+-- 5. avatars
+--    - Public: YES
+--    - File size limit: 2MB
+--    - Allowed MIME types: image/jpeg, image/png, image/webp
+--
+-- NOTE: Bucket creation via SQL is blocked by RLS on storage.buckets table.
+--       You MUST create buckets through the Dashboard UI.
+--
+-- ============================================
+-- STEP 2: RUN THIS SQL AFTER CREATING BUCKETS
+-- ============================================
 
 -- ============================================
 -- STORAGE POLICIES
