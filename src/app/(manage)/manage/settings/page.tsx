@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Building2,
   Bell,
@@ -271,13 +271,18 @@ function BillingSettings() {
 }
 
 function IntegrationSettings() {
-  // Check environment variables for integration status
-  // Note: Only NEXT_PUBLIC_ vars are available client-side
-  const hasStripe = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  const hasResend = false // RESEND_API_KEY is server-only, check via API
-  const hasTwilio = false // TWILIO vars are server-only, check via API
-  const hasMapbox = !!process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  const hasWeather = false // WEATHERAPI_KEY is server-only
+  const [status, setStatus] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/integrations/status')
+      .then(res => res.json())
+      .then(data => {
+        setStatus(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
 
   const integrations = [
     {
@@ -286,7 +291,7 @@ function IntegrationSettings() {
       icon: CreditCard,
       iconBg: 'bg-purple-500/10',
       iconColor: 'text-purple-500',
-      connected: hasStripe,
+      connected: status.stripe,
       envVar: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY & STRIPE_SECRET_KEY',
       docsUrl: 'https://stripe.com/docs',
     },
@@ -296,7 +301,7 @@ function IntegrationSettings() {
       icon: Mail,
       iconBg: 'bg-blue-500/10',
       iconColor: 'text-blue-500',
-      connected: hasResend,
+      connected: status.resend,
       envVar: 'RESEND_API_KEY',
       docsUrl: 'https://resend.com/docs',
     },
@@ -306,7 +311,7 @@ function IntegrationSettings() {
       icon: Bell,
       iconBg: 'bg-red-500/10',
       iconColor: 'text-red-500',
-      connected: hasTwilio,
+      connected: status.twilio,
       envVar: 'TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN',
       docsUrl: 'https://twilio.com/docs',
     },
@@ -316,7 +321,7 @@ function IntegrationSettings() {
       icon: Globe,
       iconBg: 'bg-green-500/10',
       iconColor: 'text-green-500',
-      connected: hasMapbox,
+      connected: status.mapbox,
       envVar: 'NEXT_PUBLIC_MAPBOX_TOKEN',
       docsUrl: 'https://docs.mapbox.com',
     },
@@ -326,7 +331,7 @@ function IntegrationSettings() {
       icon: Globe,
       iconBg: 'bg-cyan-500/10',
       iconColor: 'text-cyan-500',
-      connected: hasWeather,
+      connected: status.weather,
       envVar: 'WEATHERAPI_KEY',
       docsUrl: 'https://weatherapi.com/docs',
     },
