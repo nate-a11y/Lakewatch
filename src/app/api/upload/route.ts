@@ -9,6 +9,17 @@ const ALLOWED_BUCKETS = [
   'avatars',
 ]
 
+// Allowed MIME types per bucket for security
+const ALLOWED_MIME_TYPES: Record<string, string[]> = {
+  'inspection-photos': ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+  'service-request-photos': ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+  'property-photos': ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+  'documents': ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  'avatars': ['image/jpeg', 'image/png', 'image/webp'],
+}
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
 // POST /api/upload - Upload a file to Supabase Storage
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +41,17 @@ export async function POST(request: NextRequest) {
 
     if (!ALLOWED_BUCKETS.includes(bucket)) {
       return NextResponse.json({ error: 'Invalid bucket' }, { status: 400 })
+    }
+
+    // Validate file type
+    const allowedTypes = ALLOWED_MIME_TYPES[bucket]
+    if (!allowedTypes || !allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 })
     }
 
     // Generate unique filename
