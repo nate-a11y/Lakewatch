@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { firstName, lastName, email, phone, sendInvite } = body
+    const { firstName, lastName, email, phone, notes, sendInvite } = body
 
     if (!firstName || !lastName || !email) {
       return NextResponse.json({ error: 'First name, last name, and email are required' }, { status: 400 })
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         last_name: lastName,
         email: email.toLowerCase(),
         phone: phone || null,
+        notes: notes || null,
         role: 'customer',
       })
       .select()
