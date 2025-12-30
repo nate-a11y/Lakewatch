@@ -194,7 +194,7 @@ export default function NewCustomerPage() {
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={3}
             className="w-full px-4 py-3 bg-[#171717] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17] resize-none"
-            placeholder="Any additional notes about this customer..."
+            placeholder="Internal notes about this customer..."
           />
         </div>
 
