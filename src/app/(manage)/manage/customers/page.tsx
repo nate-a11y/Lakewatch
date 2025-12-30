@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -23,7 +23,6 @@ interface Customer {
 }
 
 export default async function CustomersPage() {
-  // Verify user is authenticated and is staff
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -31,13 +30,10 @@ export default async function CustomersPage() {
     redirect('/login')
   }
 
-  // Use admin client (bypasses RLS) for admin data fetching
-  const adminClient = createAdminClient()
-
-  // Verify user is staff before allowing access
-  const { data: userData } = await adminClient
+  // Verify admin/owner role using email (same pattern as dashboard)
+  const { data: userData } = await supabase
     .from('lwp_users')
-    .select('role')
+    .select('id, role, first_name')
     .eq('email', user.email)
     .single()
 
@@ -45,23 +41,29 @@ export default async function CustomersPage() {
     redirect('/portal')
   }
 
-  // Fetch customers (using admin client to bypass RLS)
-  const { data: customers, error } = await adminClient
+  // Debug: Log what we're getting
+  console.log('User email:', user.email)
+  console.log('User data:', userData)
+
+  // Fetch customers - same pattern as dashboard
+  const { data: customers, error, count } = await supabase
     .from('lwp_users')
-    .select('id, first_name, last_name, email, phone, status, created_at')
+    .select('id, first_name, last_name, email, phone, status, created_at', { count: 'exact' })
     .eq('role', 'customer')
     .order('last_name')
+
+  console.log('Customers query result:', { customers, error, count })
 
   if (error) {
     console.error('Error fetching customers:', error)
   }
 
-  // Fetch property counts
+  // Fetch property counts separately
   const customerIds = (customers || []).map(c => c.id)
   let propertyCounts: Record<number, number> = {}
 
   if (customerIds.length > 0) {
-    const { data: properties } = await adminClient
+    const { data: properties } = await supabase
       .from('lwp_properties')
       .select('owner_id')
       .in('owner_id', customerIds)
