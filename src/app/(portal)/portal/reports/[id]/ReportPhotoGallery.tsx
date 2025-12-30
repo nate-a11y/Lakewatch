@@ -112,8 +112,8 @@ export default function ReportPhotoGallery({ photos }: { photos: Photo[] }) {
           {/* Close button */}
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-lg transition-colors z-10"
-            aria-label="Close"
+            className="absolute top-4 right-4 p-2 min-w-[44px] min-h-[44px] text-white hover:bg-white/10 rounded-lg transition-colors z-10 flex items-center justify-center"
+            aria-label="Close lightbox"
           >
             <X className="w-6 h-6" />
           </button>
@@ -121,8 +121,8 @@ export default function ReportPhotoGallery({ photos }: { photos: Photo[] }) {
           {/* Download button */}
           <button
             onClick={() => handleDownload(currentPhoto)}
-            className="absolute top-4 right-16 p-2 text-white hover:bg-white/10 rounded-lg transition-colors z-10"
-            aria-label="Download"
+            className="absolute top-4 right-16 p-2 min-w-[44px] min-h-[44px] text-white hover:bg-white/10 rounded-lg transition-colors z-10 flex items-center justify-center"
+            aria-label="Download photo"
           >
             <Download className="w-6 h-6" />
           </button>
@@ -131,7 +131,7 @@ export default function ReportPhotoGallery({ photos }: { photos: Photo[] }) {
           {photos.length > 1 && (
             <button
               onClick={prevPhoto}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 min-w-[44px] min-h-[44px] text-white hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
               aria-label="Previous photo"
             >
               <ChevronLeft className="w-8 h-8" />
@@ -158,7 +158,7 @@ export default function ReportPhotoGallery({ photos }: { photos: Photo[] }) {
           {photos.length > 1 && (
             <button
               onClick={nextPhoto}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 min-w-[44px] min-h-[44px] text-white hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
               aria-label="Next photo"
             >
               <ChevronRight className="w-8 h-8" />
