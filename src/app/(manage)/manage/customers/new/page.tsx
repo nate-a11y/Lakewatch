@@ -22,7 +22,6 @@ export default function NewCustomerPage() {
     email: '',
     phone: '',
     plan: 'standard',
-    notes: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,7 +48,6 @@ export default function NewCustomerPage() {
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone,
-          notes: formData.notes,
           sendInvite: true,
         }),
       })
@@ -182,20 +180,6 @@ export default function NewCustomerPage() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Notes */}
-        <div className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-          <label className="block text-sm font-medium text-[#a1a1aa] mb-2">
-            Notes (optional)
-          </label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
-            className="w-full px-4 py-3 bg-[#171717] border border-[#27272a] rounded-lg focus:outline-none focus:border-[#4cbb17] resize-none"
-            placeholder="Any additional notes about this customer..."
-          />
         </div>
 
         {/* Actions */}
