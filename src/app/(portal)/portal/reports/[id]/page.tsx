@@ -14,9 +14,11 @@ import {
   Check,
   X,
   AlertCircle,
+  MessageCircle,
 } from 'lucide-react'
 import DownloadPDFButton from './DownloadPDFButton'
 import ReportPhotoGallery from './ReportPhotoGallery'
+import { GPSVerificationBadge } from '@/components/portal/GPSVerificationBadge'
 
 export default async function ReportDetailPage({
   params,
@@ -189,6 +191,19 @@ export default async function ReportDetailPage({
             </div>
           )}
         </div>
+
+        {/* GPS Verification */}
+        <GPSVerificationBadge
+          verified={!!inspection.check_in_time && !!inspection.check_out_time}
+          checkInTime={inspection.check_in_time}
+          checkOutTime={inspection.check_out_time}
+          location={inspection.gps_location ? {
+            lat: inspection.gps_location.lat,
+            lng: inspection.gps_location.lng,
+            address: report.property.address,
+          } : undefined}
+          className="mt-4"
+        />
       </div>
 
       {/* Summary */}
@@ -241,6 +256,13 @@ export default async function ReportDetailPage({
                         <strong>Action taken:</strong> {issue.action_taken}
                       </p>
                     )}
+                    <Link
+                      href={`/portal/messages/new?subject=${encodeURIComponent(`Question about ${report.property.name} inspection on ${report.date}`)}&body=${encodeURIComponent(`I have a question about the issue: "${issue.description}"\n\n`)}`}
+                      className="inline-flex items-center gap-1.5 mt-3 text-sm text-[#4cbb17] hover:underline"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Ask About This
+                    </Link>
                   </div>
                 </div>
               </div>

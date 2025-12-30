@@ -55,7 +55,6 @@ export default async function AdminDashboardPage() {
     lastMonthRevenueResult,
     todayScheduleResult,
     // Comparison queries
-    customersLastWeekResult,
     propertiesLastWeekResult,
     inspectionsYesterdayResult,
     requestsLastWeekResult,

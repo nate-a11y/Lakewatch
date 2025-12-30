@@ -176,15 +176,18 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                 <div className="w-20 h-20 rounded-full bg-[#27272a] flex items-center justify-center overflow-hidden">
                   {user.avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <span className="text-3xl font-bold text-[#71717a]">
                       {user.firstName[0] || ''}{user.lastName[0] || ''}
                     </span>
                   )}
                 </div>
-                <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#4cbb17] text-black rounded-full flex items-center justify-center hover:bg-[#60e421] transition-colors">
-                  <Camera className="w-4 h-4" />
+                <button
+                  className="absolute -bottom-1 -right-1 w-11 h-11 bg-[#4cbb17] text-black rounded-full flex items-center justify-center hover:bg-[#60e421] transition-colors"
+                  aria-label="Change profile photo"
+                >
+                  <Camera className="w-5 h-5" />
                 </button>
               </div>
               <div>
@@ -294,7 +297,8 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                       </span>
                       <button
                         onClick={() => handleRemoveAuthorizedUser(authUser.id)}
-                        className="p-2 text-[#71717a] hover:text-red-400 transition-colors"
+                        className="p-2 min-w-[44px] min-h-[44px] text-[#71717a] hover:text-red-400 transition-colors flex items-center justify-center"
+                        aria-label={`Remove ${authUser.name} from authorized users`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -350,9 +354,11 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                       <td className="text-center py-4">
                         <button
                           onClick={() => toggleNotification(index, 'email')}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
                             notification.email ? 'bg-[#4cbb17] text-black' : 'bg-[#27272a] text-[#71717a]'
                           }`}
+                          aria-label={`${notification.email ? 'Disable' : 'Enable'} email notifications for ${notification.type}`}
+                          aria-pressed={notification.email}
                         >
                           <Check className="w-4 h-4" />
                         </button>
@@ -360,9 +366,11 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                       <td className="text-center py-4">
                         <button
                           onClick={() => toggleNotification(index, 'sms')}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
                             notification.sms ? 'bg-[#4cbb17] text-black' : 'bg-[#27272a] text-[#71717a]'
                           }`}
+                          aria-label={`${notification.sms ? 'Disable' : 'Enable'} SMS notifications for ${notification.type}`}
+                          aria-pressed={notification.sms}
                         >
                           <Check className="w-4 h-4" />
                         </button>
@@ -370,9 +378,11 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                       <td className="text-center py-4">
                         <button
                           onClick={() => toggleNotification(index, 'push')}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          className={`w-11 h-11 rounded-lg flex items-center justify-center transition-colors ${
                             notification.push ? 'bg-[#4cbb17] text-black' : 'bg-[#27272a] text-[#71717a]'
                           }`}
+                          aria-label={`${notification.push ? 'Disable' : 'Enable'} push notifications for ${notification.type}`}
+                          aria-pressed={notification.push}
                         >
                           <Check className="w-4 h-4" />
                         </button>
@@ -524,7 +534,8 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
                     ) : (
                       <button
                         onClick={() => handleLogoutSession(session.id)}
-                        className="p-2 text-[#71717a] hover:text-red-400 transition-colors"
+                        className="p-2 min-w-[44px] min-h-[44px] text-[#71717a] hover:text-red-400 transition-colors flex items-center justify-center"
+                        aria-label={`Log out from ${session.device}`}
                       >
                         <LogOut className="w-4 h-4" />
                       </button>

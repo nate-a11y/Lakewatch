@@ -9,11 +9,15 @@ import {
   Shield,
   Globe,
   Save,
+  History,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { AuditLogTable } from '@/components/manage/AuditLogTable'
+import { NotificationTemplates } from '@/components/manage/NotificationTemplates'
 
-type SettingsTab = 'company' | 'notifications' | 'billing' | 'integrations' | 'security'
+type SettingsTab = 'company' | 'notifications' | 'templates' | 'billing' | 'integrations' | 'security' | 'audit'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('company')
@@ -21,9 +25,11 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'company' as const, label: 'Company', icon: Building2 },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { id: 'templates' as const, label: 'Templates', icon: FileText },
     { id: 'billing' as const, label: 'Billing', icon: CreditCard },
     { id: 'integrations' as const, label: 'Integrations', icon: Globe },
     { id: 'security' as const, label: 'Security', icon: Shield },
+    { id: 'audit' as const, label: 'Audit Log', icon: History },
   ]
 
   return (
@@ -61,9 +67,11 @@ export default function SettingsPage() {
         <div className="flex-1 min-w-0">
           {activeTab === 'company' && <CompanySettings />}
           {activeTab === 'notifications' && <NotificationSettings />}
+          {activeTab === 'templates' && <NotificationTemplates />}
           {activeTab === 'billing' && <BillingSettings />}
           {activeTab === 'integrations' && <IntegrationSettings />}
           {activeTab === 'security' && <SecuritySettings />}
+          {activeTab === 'audit' && <AuditLogTable />}
         </div>
       </div>
     </div>

@@ -186,7 +186,7 @@ export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-lg hover:bg-[#27272a] transition-colors"
+        className="relative p-3 min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#27272a] transition-colors flex items-center justify-center"
         aria-label="Notifications"
       >
         <Bell className={cn(
@@ -261,10 +261,10 @@ export function NotificationsDropdown({ portal }: NotificationsDropdownProps) {
                       {!notification.read_at && (
                         <button
                           onClick={(e) => markAsRead(notification.id, e)}
-                          className="flex-shrink-0 p-1 hover:bg-[#3f3f46] rounded transition-colors"
-                          title="Mark as read"
+                          className="flex-shrink-0 p-2 min-w-[44px] min-h-[44px] hover:bg-[#3f3f46] rounded transition-colors flex items-center justify-center"
+                          aria-label="Mark as read"
                         >
-                          <Check className="w-3 h-3 text-[#71717a]" />
+                          <Check className="w-4 h-4 text-[#71717a]" />
                         </button>
                       )}
                     </div>

@@ -30,7 +30,6 @@ interface PreviousInspectionReferenceProps {
 
 export function PreviousInspectionReference({
   inspection,
-  propertyName: _propertyName,
   className,
 }: PreviousInspectionReferenceProps) {
   const [isExpanded, setIsExpanded] = useState(false)

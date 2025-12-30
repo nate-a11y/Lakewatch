@@ -66,7 +66,7 @@ export default buildConfig({
     Notifications,
   ],
   editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || 'lake-watch-pros-secret-change-me',
+  secret: process.env.PAYLOAD_SECRET!,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },

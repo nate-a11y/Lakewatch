@@ -10,9 +10,6 @@ import {
   AlertTriangle,
   FileText,
   Edit,
-  Thermometer,
-  Droplets,
-  Camera,
 } from 'lucide-react'
 import EditableNotes from '@/components/EditableNotes'
 

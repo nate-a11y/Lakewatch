@@ -83,7 +83,8 @@ export function SecuritySettings({
     }
   }
 
-  const handleLogoutSession = async (_sessionId: string) => {
+  const handleLogoutSession = async (sessionId: string) => {
+    console.log('Logging out session:', sessionId)
     try {
       // API call would go here
       toast.success('Session logged out')
