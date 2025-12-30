@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   Plus,
@@ -22,11 +23,30 @@ interface Customer {
 }
 
 export default async function CustomersPage() {
+  // Verify user is authenticated and is staff
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // Fetch customers with their property counts
-  // Note: Using separate query for property counts due to RLS on properties table
-  const { data: customers, error } = await supabase
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Use admin client (bypasses RLS) for admin data fetching
+  const adminClient = createAdminClient()
+
+  // Verify user is staff before allowing access
+  const { data: userData } = await adminClient
+    .from('lwp_users')
+    .select('role')
+    .eq('email', user.email)
+    .single()
+
+  if (!userData || !['admin', 'owner', 'staff'].includes(userData.role)) {
+    redirect('/portal')
+  }
+
+  // Fetch customers (using admin client to bypass RLS)
+  const { data: customers, error } = await adminClient
     .from('lwp_users')
     .select('id, first_name, last_name, email, phone, status, created_at')
     .eq('role', 'customer')
@@ -36,12 +56,12 @@ export default async function CustomersPage() {
     console.error('Error fetching customers:', error)
   }
 
-  // Fetch property counts separately to avoid RLS join issues
+  // Fetch property counts
   const customerIds = (customers || []).map(c => c.id)
   let propertyCounts: Record<number, number> = {}
 
   if (customerIds.length > 0) {
-    const { data: properties } = await supabase
+    const { data: properties } = await adminClient
       .from('lwp_properties')
       .select('owner_id')
       .in('owner_id', customerIds)
