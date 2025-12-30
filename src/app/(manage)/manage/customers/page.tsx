@@ -25,17 +25,33 @@ export default async function CustomersPage() {
   const supabase = await createClient()
 
   // Fetch customers with their property counts
+  // Note: Using separate query for property counts due to RLS on properties table
   const { data: customers, error } = await supabase
     .from('lwp_users')
-    .select(`
-      id, first_name, last_name, email, phone, status, created_at,
-      properties:lwp_properties(count)
-    `)
+    .select('id, first_name, last_name, email, phone, status, created_at')
     .eq('role', 'customer')
     .order('last_name')
 
   if (error) {
     console.error('Error fetching customers:', error)
+  }
+
+  // Fetch property counts separately to avoid RLS join issues
+  const customerIds = (customers || []).map(c => c.id)
+  let propertyCounts: Record<number, number> = {}
+
+  if (customerIds.length > 0) {
+    const { data: properties } = await supabase
+      .from('lwp_properties')
+      .select('owner_id')
+      .in('owner_id', customerIds)
+
+    if (properties) {
+      propertyCounts = properties.reduce((acc, p) => {
+        acc[p.owner_id] = (acc[p.owner_id] || 0) + 1
+        return acc
+      }, {} as Record<number, number>)
+    }
   }
 
   // Transform data to include property counts
@@ -47,7 +63,7 @@ export default async function CustomersPage() {
     phone: c.phone,
     status: c.status || 'active',
     created_at: c.created_at,
-    properties_count: Array.isArray(c.properties) ? c.properties[0]?.count || 0 : 0,
+    properties_count: propertyCounts[c.id] || 0,
     plan_name: null, // Will be derived from their properties
   }))
 

@@ -271,77 +271,135 @@ function BillingSettings() {
 }
 
 function IntegrationSettings() {
+  // Check environment variables for integration status
+  // Note: Only NEXT_PUBLIC_ vars are available client-side
+  const hasStripe = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  const hasResend = false // RESEND_API_KEY is server-only, check via API
+  const hasTwilio = false // TWILIO vars are server-only, check via API
+  const hasMapbox = !!process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const hasWeather = false // WEATHERAPI_KEY is server-only
+
+  const integrations = [
+    {
+      name: 'Stripe',
+      description: 'Payment processing',
+      icon: CreditCard,
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-500',
+      connected: hasStripe,
+      envVar: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY & STRIPE_SECRET_KEY',
+      docsUrl: 'https://stripe.com/docs',
+    },
+    {
+      name: 'Resend',
+      description: 'Email delivery',
+      icon: Mail,
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-500',
+      connected: hasResend,
+      envVar: 'RESEND_API_KEY',
+      docsUrl: 'https://resend.com/docs',
+    },
+    {
+      name: 'Twilio',
+      description: 'SMS notifications',
+      icon: Bell,
+      iconBg: 'bg-red-500/10',
+      iconColor: 'text-red-500',
+      connected: hasTwilio,
+      envVar: 'TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN',
+      docsUrl: 'https://twilio.com/docs',
+    },
+    {
+      name: 'Mapbox',
+      description: 'Maps & routing',
+      icon: Globe,
+      iconBg: 'bg-green-500/10',
+      iconColor: 'text-green-500',
+      connected: hasMapbox,
+      envVar: 'NEXT_PUBLIC_MAPBOX_TOKEN',
+      docsUrl: 'https://docs.mapbox.com',
+    },
+    {
+      name: 'WeatherAPI',
+      description: 'Weather data',
+      icon: Globe,
+      iconBg: 'bg-cyan-500/10',
+      iconColor: 'text-cyan-500',
+      connected: hasWeather,
+      envVar: 'WEATHERAPI_KEY',
+      docsUrl: 'https://weatherapi.com/docs',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
         <h2 className="text-lg font-semibold mb-4">Connected Services</h2>
+        <p className="text-sm text-[#71717a] mb-4">
+          Configure integrations by adding the required environment variables to your deployment.
+        </p>
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-purple-500" />
+          {integrations.map((integration) => (
+            <div key={integration.name} className="p-4 bg-black/30 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', integration.iconBg)}>
+                    <integration.icon className={cn('w-5 h-5', integration.iconColor)} />
+                  </div>
+                  <div>
+                    <p className="font-medium">{integration.name}</p>
+                    <p className={cn('text-sm', integration.connected ? 'text-green-500' : 'text-[#71717a]')}>
+                      {integration.connected ? 'Connected' : 'Not configured'}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={integration.docsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#4cbb17] hover:underline"
+                >
+                  Docs →
+                </a>
               </div>
-              <div>
-                <p className="font-medium">Stripe</p>
-                <p className="text-sm text-green-500">Connected</p>
-              </div>
+              {!integration.connected && (
+                <div className="mt-3 p-3 bg-black/50 rounded-lg">
+                  <p className="text-xs text-[#71717a] mb-1">Required environment variable:</p>
+                  <code className="text-xs text-yellow-500 font-mono">{integration.envVar}</code>
+                </div>
+              )}
             </div>
-            <button onClick={() => toast.success('Opening configuration...')} className="text-sm text-[#71717a] hover:text-white">Configure</button>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <Mail className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="font-medium">Resend (Email)</p>
-                <p className="text-sm text-green-500">Connected</p>
-              </div>
-            </div>
-            <button onClick={() => toast.success('Opening configuration...')} className="text-sm text-[#71717a] hover:text-white">Configure</button>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
-                <Bell className="w-5 h-5 text-red-500" />
-              </div>
-              <div>
-                <p className="font-medium">Twilio (SMS)</p>
-                <p className="text-sm text-[#71717a]">Not connected</p>
-              </div>
-            </div>
-            <button onClick={() => toast.success('Integration setup coming soon')} className="text-sm text-[#4cbb17] hover:underline">Connect</button>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <Globe className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className="font-medium">Mapbox</p>
-                <p className="text-sm text-[#71717a]">Not connected</p>
-              </div>
-            </div>
-            <button onClick={() => toast.success('Integration setup coming soon')} className="text-sm text-[#4cbb17] hover:underline">Connect</button>
-          </div>
+          ))}
         </div>
       </section>
 
       <section className="bg-[#0f0f0f] border border-[#27272a] rounded-xl p-6">
-        <h2 className="text-lg font-semibold mb-4">API Access</h2>
+        <h2 className="text-lg font-semibold mb-4">Environment Setup</h2>
         <div className="p-4 bg-black/30 rounded-lg">
-          <p className="text-sm text-[#71717a] mb-2">API Key</p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              defaultValue="sk_live_12345678901234567890"
-              className="flex-1 px-4 py-2 bg-[#0f0f0f] border border-[#27272a] rounded-lg font-mono text-sm"
-              readOnly
-            />
-            <button className="px-4 py-2 border border-[#27272a] rounded-lg hover:bg-[#27272a] text-sm">
-              Reveal
-            </button>
-          </div>
+          <p className="text-sm text-[#71717a] mb-3">
+            Add these variables to your <code className="text-[#4cbb17]">.env.local</code> file or deployment settings:
+          </p>
+          <pre className="text-xs text-[#a1a1aa] font-mono bg-black/50 p-3 rounded overflow-x-auto">
+{`# Stripe (Payments)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Resend (Email)
+RESEND_API_KEY=re_...
+
+# Twilio (SMS)
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+1...
+
+# Mapbox (Maps)
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.ey...
+
+# Weather
+WEATHERAPI_KEY=...`}
+          </pre>
         </div>
       </section>
     </div>
