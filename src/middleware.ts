@@ -9,7 +9,7 @@ const authRoutes = ['/login', '/signup', '/reset-password']
 
 export async function middleware(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request)
-  const { pathname } = request.nextUrl
+  const { pathname, searchParams } = request.nextUrl
 
   // Skip middleware for static files and API routes
   if (
@@ -19,6 +19,21 @@ export async function middleware(request: NextRequest) {
     pathname.includes('.')
   ) {
     return supabaseResponse
+  }
+
+  // Handle viewAs=customer parameter - set cookie for admin customer view
+  if (searchParams.get('viewAs') === 'customer' && pathname.startsWith('/portal')) {
+    supabaseResponse.cookies.set('viewAsCustomer', 'true', {
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+      httpOnly: true,
+      sameSite: 'lax',
+    })
+  }
+
+  // Clear viewAs cookie when returning to manage dashboard
+  if (pathname.startsWith('/manage')) {
+    supabaseResponse.cookies.delete('viewAsCustomer')
   }
 
   // Check if route requires authentication

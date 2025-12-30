@@ -88,7 +88,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
                   Settings
                 </Link>
                 <Link
-                  href="/portal"
+                  href="/portal?viewAs=customer"
                   onClick={() => setDropdownOpen(false)}
                   className="flex items-center gap-3 px-4 py-2 text-sm text-[#a1a1aa] hover:text-white hover:bg-[#27272a] transition-colors"
                 >
